@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>سوبر ماركت أبو سارة — نقطة البيع</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- المكتبات الأساسية -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+<style>
+  :root{
+    --ink:#1C2B33;
+    --ink-soft:#3C4C54;
+    --paper:#F7F5F0;
+    --card:#FFFFFF;
+    --brass:#B8862E;
+    --brass-deep:#8F6A22;
+    --sage:#4F7A63;
+    --sage-bg:#EAF1EC;
+    --clay:#B23B3B;
+    --clay-bg:#F7E9E7;
+    --line:#E4DED0;
+    --line-soft:#EFEBE0;
+    --sidebar-w: 58px;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Almarai', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Tajawal',sans-serif;}
+  .tabular{font-variant-numeric: tabular-nums;}
+  a{text-decoration:none;color:inherit;}
+
+  .app-container{
+    display:flex;
+    width:100%;
+    max-width:600px;
+    min-height:100vh;
+    background:var(--paper);
+    position:relative;
+    border-inline:1px solid var(--line-soft);
+  }
+
+  /* 1. الشريط الجانبي */
+  .sidebar{
+    width:var(--sidebar-w);
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:10px 0;
+    gap:4px;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    height:100vh;
+    z-index:20;
+  }
+  .sidebar-logo{
+    width:38px;height:38px;background:var(--brass);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Tajawal';font-weight:800;font-size:17px;color:var(--ink);
+    margin-bottom:6px;
+  }
+  .side-link{
+    width:44px;height:44px;border-radius:8px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;color:#9AABB4;gap:2px;transition:0.15s;
+  }
+  .side-link .icon{font-size:16px;}
+  .side-link .lbl{font-size:7.5px;font-weight:700;}
+  .side-link:hover, .side-link.active{background:rgba(255,255,255,0.12);color:#fff;}
+  .side-link.active{background:var(--brass);color:var(--ink);}
+
+  /* 2. منطقة العمل */
+  .main-content{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    padding-bottom:10px;
+  }
+
+  /* الترويسة */
+  .pos-header{padding:12px 14px;background:var(--ink);color:#fff;border-radius:0 0 14px 14px;}
+  .header-meta{display:flex;align-items:center;justify-content:space-between;}
+  .store-title{font-family:'Tajawal';font-weight:800;font-size:15px;}
+  .branch-tag{font-size:10px;color:#D9CBA8;}
+
+  .search-wrap{display:flex;gap:6px;margin-top:10px;}
+  .search-box{
+    flex:1;background:rgba(255,255,255,.12);border-radius:9px;display:flex;align-items:center;gap:6px;padding:8px 10px;
+  }
+  .search-box input{background:transparent;border:none;outline:none;color:#fff;font-family:'Almarai';font-size:12.5px;flex:1;}
+  .search-box input::placeholder{color:#B9C1C4;}
+  .scan-btn{
+    width:36px;height:36px;background:var(--brass);border-radius:9px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:15px;
+  }
+
+  .price-toggle{display:flex;background:rgba(255,255,255,.1);border-radius:8px;padding:2px;margin-top:8px;}
+  .price-toggle button{
+    flex:1;border:none;background:transparent;color:#C6CBCC;padding:6px 0;border-radius:6px;
+    font-family:'Tajawal';font-weight:800;font-size:11.5px;cursor:pointer;
+  }
+  .price-toggle button.active{background:var(--brass);color:#fff;}
+
+  /* 3. شريط العميل المدمج */
+  .cust-bar{
+    margin:8px 10px 0;
+    padding:6px 8px;
+    background:var(--card);
+    border:1px solid var(--line-soft);
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .cust-input-wrap{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:0 6px;
+    height:30px;
+  }
+  .cust-input-wrap.phone-box{width:115px;flex-shrink:0;}
+  .cust-input-wrap.name-box{flex:1;}
+  .cust-input-wrap input{
+    border:none;
+    outline:none;
+    width:100%;
+    font-family:'Almarai';
+    font-size:11.5px;
+    color:var(--ink);
+    background:transparent;
+  }
+  
+  .status-dot-indicator{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#D0C9BA;
+    flex-shrink:0;
+    transition:0.3s;
+  }
+  .status-dot-indicator.clean{background:var(--sage);box-shadow:0 0 6px var(--sage);}
+  .status-dot-indicator.debt{background:var(--clay);box-shadow:0 0 6px var(--clay);}
+  .status-dot-indicator.new{background:var(--brass);box-shadow:0 0 6px var(--brass);}
+
+  /* 4. بنود الفاتورة */
+  .items-section{padding:8px 10px 4px;flex:1;}
+  .empty-items{
+    padding:26px 10px;text-align:center;background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);
+  }
+  .empty-items .icon{font-size:22px;color:#C9C2B2;margin-bottom:4px;}
+  .empty-items p{margin:0;font-size:11.5px;color:#A39C8D;}
+
+  .item-card{
+    background:var(--card);border:1px solid var(--line-soft);border-radius:8px;
+    padding:8px 10px;margin-bottom:6px;display:flex;flex-direction:column;gap:6px;
+  }
+  .item-row-top{display:flex;align-items:center;justify-content:space-between;}
+  .item-name{font-size:12.5px;font-weight:700;}
+  .item-delete-btn{border:none;background:transparent;color:#A39C8D;font-size:13px;cursor:pointer;padding:2px 4px;}
+  .item-delete-btn:hover{color:var(--clay);}
+
+  .item-row-bottom{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .unit-select{
+    padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--paper);
+    font-family:'Almarai';font-size:10.5px;font-weight:700;color:var(--ink);outline:none;
+  }
+  .qty-control{
+    display:flex;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  }
+  .qty-btn{width:22px;height:24px;border:none;background:transparent;font-weight:800;color:var(--ink);cursor:pointer;}
+  .qty-btn:hover{background:var(--line-soft);}
+  .qty-input{
+    width:34px;height:24px;border:none;background:transparent;text-align:center;font-family:'Almarai';
+    font-size:11.5px;font-weight:800;color:var(--ink);outline:none;
+  }
+  .item-pricing{text-align:left;}
+  .item-unit-price{font-size:9.5px;color:#9A9384;}
+  .item-total-price{font-family:'Tajawal';font-weight:800;font-size:12.5px;color:var(--ink);}
+
+  /* 5. ملخص الدفع */
+  .pay-summary{padding:6px 10px 0;background:var(--paper);}
+  .sum-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft);padding:2px 0;}
+  .sum-row.total{
+    font-family:'Tajawal';font-weight:800;font-size:14.5px;color:var(--ink);
+    border-top:1px dashed var(--line);margin-top:4px;padding-top:5px;
+  }
+
+  .pay-type-toggle{display:flex;background:var(--card);border:1px solid var(--line-soft);border-radius:8px;padding:2px;margin:6px 10px 0;}
+  .pay-type-toggle button{
+    flex:1;border:none;background:transparent;color:var(--ink-soft);padding:5px 0;border-radius:6px;
+    font-family:'Tajawal';font-weight:800;font-size:11px;cursor:pointer;
+  }
+  .pay-type-toggle button.active{background:var(--ink);color:#fff;}
+
+  .partial-block{
+    display:none;margin:6px 10px 0;padding:6px 8px;border-radius:8px;background:var(--card);border:1px solid var(--line-soft);
+  }
+  .partial-block.show{display:block;}
+  .partial-row{display:flex;align-items:center;gap:6px;}
+  .partial-row input{flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--line);font-size:11.5px;font-weight:700;outline:none;}
+  .remainder-tag{
+    margin-top:4px;padding:4px 6px;background:var(--clay-bg);color:var(--clay);border-radius:6px;
+    font-size:10px;font-weight:700;display:flex;justify-content:space-between;
+  }
+
+  .pay-methods{display:flex;gap:5px;padding:6px 10px 0;}
+  .pm-btn{
+    flex:1;padding:6px 2px;border-radius:8px;border:1px solid var(--line);background:var(--card);
+    text-align:center;font-size:10.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;
+  }
+  .pm-btn.active{border-color:var(--brass);background:#FBF3E6;color:var(--brass-deep);}
+
+  .wallet-block{display:none;margin:6px 10px 0;padding:6px 8px;border-radius:8px;background:#EEF3F8;border:1px dashed #6E8FB0;}
+  .wallet-block.show{display:block;}
+  .wallet-block input{width:100%;padding:5px 8px;border-radius:6px;border:1px solid #B9CCDD;font-size:11px;outline:none;}
+
+  /* 6. أزرار الإنهاء */
+  .checkout-bar{
+    position:sticky;bottom:0;padding:6px 10px 8px;background:var(--paper);z-index:10;
+    display:flex;gap:6px;
+  }
+  .action-btn{
+    flex:1;border:none;border-radius:8px;padding:10px;font-family:'Tajawal';font-weight:800;font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#fff;
+  }
+  .btn-direct-print{background:var(--ink);}
+  .btn-whatsapp-print{background:var(--sage);}
+  .action-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* النوافذ المنبثقة */
+  .modal-overlay{
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);
+    z-index:100;align-items:center;justify-content:center;padding:16px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    width:100%;max-width:320px;background:#fff;border-radius:12px;overflow:hidden;
+    padding:14px;box-shadow:0 10px 30px rgba(0,0,0,0.3);position:relative;
+  }
+  .modal-close{
+    position:absolute;top:8px;left:8px;background:transparent;border:none;
+    font-size:16px;cursor:pointer;color:#888;
+  }
+  .modal-card h4{margin:0 0 8px;font-family:'Tajawal';font-size:13.5px;}
+  .modal-input{
+    width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;
+    font-size:12px;outline:none;margin-bottom:8px;font-family:'Almarai';
+  }
+  .modal-submit-btn{
+    width:100%;background:var(--sage);color:#fff;border:none;padding:9px;
+    border-radius:7px;font-family:'Tajawal';font-weight:800;font-size:12.5px;cursor:pointer;
+  }
+
+  /* إيصال الطباعة الحرارية */
+  #printableReceipt{display:none;}
+  @media print{
+    body * {visibility: hidden;}
+    #printableReceipt, #printableReceipt * {visibility: visible;}
+    #printableReceipt {
+      display: block !important;
+      position: absolute;
+      left: 0; top: 0; width: 78mm;
+      margin: 0; padding: 5mm;
+      font-family: 'Almarai', sans-serif;
+      font-size: 11px; color: #000; background: #fff;
+    }
+    .r-head{text-align:center;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;}
+    .r-title{font-family:'Tajawal';font-weight:800;font-size:15px;}
+    .r-meta{font-size:9.5px;line-height:1.4;}
+    .r-table{width:100%;border-collapse:collapse;margin:6px 0;}
+    .r-table th{font-size:9.5px;border-bottom:1px solid #000;text-align:right;padding:3px 0;}
+    .r-table td{font-size:10px;padding:3px 0;border-bottom:1px dashed #ddd;}
+    .r-num{text-align:left;font-family:'Tajawal';font-weight:700;}
+    .r-totals{border-top:1px dashed #000;padding-top:4px;margin-top:4px;}
+    .r-row{display:flex;justify-content:space-between;padding:1.5px 0;}
+    .r-row.grand{font-weight:800;font-size:13px;border-top:1px solid #000;margin-top:3px;padding-top:3px;}
+    .r-footer{text-align:center;margin-top:8px;padding-top:6px;border-top:1px dashed #000;}
+    .r-barcode-wrap{text-align:center;margin-top:6px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- 1. الشريط الجانبي -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">س</div>
+    <a href="index.html" class="side-link active" title="البيع"><span class="icon">🛒</span><span class="lbl">البيع</span></a>
+    <a href="products.html" class="side-link" title="المخزون"><span class="icon">📦</span><span class="lbl">المخزون</span></a>
+    <a href="statement.html" class="side-link" title="العملاء"><span class="icon">👥</span><span class="lbl">العملاء</span></a>
+    <a href="purchases.html" class="side-link" title="المشتريات"><span class="icon">🧾</span><span class="lbl">المشتريات</span></a>
+    <a href="transfer.html" class="side-link" title="التحويل"><span class="icon">🏬</span><span class="lbl">التحويل</span></a>
+    <a href="cashbox.html" class="side-link" title="الصندوق"><span class="icon">💰</span><span class="lbl">الصندوق</span></a>
+    <a href="reports.html" class="side-link" title="التقارير"><span class="icon">📊</span><span class="lbl">التقارير</span></a>
+    <a href="settings.html" class="side-link" title="الإعدادات"><span class="icon">⚙️</span><span class="lbl">الإعدادات</span></a>
+  </aside>
+
+  <!-- 2. منطقة العمل الرئيسية -->
+  <main class="main-content">
+    
+    <div class="pos-header">
+      <div class="header-meta">
+        <div class="store-title">سوبر ماركت أبو سارة</div>
+        <div class="branch-tag">الفرع الرئيسي</div>
+      </div>
+      <div class="search-wrap">
+        <div class="search-box">
+          🔍<input type="text" id="barcodeInput" placeholder="امسح الباركود أو ابحث بالاسم...">
+        </div>
+        <div class="scan-btn" onclick="startCameraScanner()" title="كاميرا الموبايل">📷</div>
+      </div>
+      <div class="price-toggle" id="priceToggle">
+        <button class="active" data-mode="retail">سعر المفرق</button>
+        <button data-mode="wholesale">سعر الجملة</button>
+      </div>
+    </div>
+
+    <!-- شريط العميل المدمج -->
+    <div class="cust-bar">
+      <div class="cust-input-wrap phone-box">
+        <span class="status-dot-indicator" id="custStatusDot" title="حالة العميل"></span>
+        <input type="tel" id="custPhoneInput" placeholder="هاتف (09...)" oninput="handlePhoneLookup(this.value)">
+      </div>
+      <div class="cust-input-wrap name-box">
+        <input type="text" id="custNameInput" placeholder="اسم العميل">
+      </div>
+    </div>
+
+    <!-- بنود الفاتورة -->
+    <div class="items-section">
+      <div id="itemsContainer"></div>
+      <div class="empty-items" id="emptyItemsBox">
+        <div class="icon">🛒</div>
+        <p>لا توجد بنود مضافة — امسح الباركود للبدء</p>
+      </div>
+    </div>
+
+    <!-- ملخص المبالغ -->
+    <div class="pay-summary">
+      <div class="sum-row"><span>المجموع:</span><span class="tabular" id="subtotalDisplay">0 ل.س</span></div>
+      <div class="sum-row"><span>الخصم:</span><span class="tabular" id="discountDisplay">0 ل.س</span></div>
+      <div class="sum-row total"><span>الإجمالي:</span><span class="tabular" id="grandTotalDisplay">0 ل.س</span></div>
+    </div>
+
+    <!-- خيارات الدفع -->
+    <div class="pay-type-toggle" id="payTypeToggle">
+      <button class="active" data-type="full">دفع كامل</button>
+      <button data-type="partial">دفع جزئي (والباقي آجل)</button>
+    </div>
+
+    <div class="partial-block" id="partialBlock">
+      <div class="partial-row">
+        <input type="number" id="paidNowInput" placeholder="المدفوع الآن" min="0" step="500">
+        <span style="font-size:11px;font-weight:700">ل.س</span>
+      </div>
+      <div class="remainder-tag">
+        <span>المتبقي ذمة:</span>
+        <span class="tabular" id="remainderDisplay">0 ل.س</span>
+      </div>
+    </div>
+
+    <div class="pay-methods" id="payMethods">
+      <div class="pm-btn active" data-method="cash">💵 نقدي</div>
+      <div class="pm-btn" data-method="wallet">📱 سيريتل / MTN كاش</div>
+      <div class="pm-btn" data-method="card">💳 بطاقة</div>
+    </div>
+
+    <div class="wallet-block" id="walletBlock">
+      <input type="text" id="walletRefInput" placeholder="رقم / كود عملية التحويل">
+    </div>
+
+    <!-- أزرار الإنهاء -->
+    <div class="checkout-bar">
+      <button class="action-btn btn-direct-print" id="directPrintBtn" disabled onclick="handleCheckout('print')">
+        🖨️ إتمام وطباعة
+      </button>
+      <button class="action-btn btn-whatsapp-print" id="whatsappPrintBtn" disabled onclick="handleCheckout('whatsapp')">
+        📲 طباعة وواتساب
+      </button>
+    </div>
+
+  </main>
+</div>
+
+<!-- نافذة الكاميرا -->
+<div class="modal-overlay" id="scannerModal">
+  <div class="modal-card" style="padding:8px;">
+    <button class="modal-close" onclick="stopCameraScanner()">✕</button>
+    <div id="reader" style="width:100%;"></div>
+  </div>
+</div>
+
+<!-- نافذة الواتساب -->
+<div class="modal-overlay" id="whatsappModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeWhatsappModal()">✕</button>
+    <h4>📲 إرسال الفاتورة عبر واتساب</h4>
+    <input type="tel" id="modalWhatsappPhone" class="modal-input" placeholder="رقم هاتف الزبون (09xxxxxxxx)">
+    <button class="modal-submit-btn" onclick="confirmWhatsappAndPrint()">إرسال وطباعة</button>
+  </div>
+</div>
+
+<!-- إيصال الطباعة الحرارية -->
+<div id="printableReceipt">
+  <div class="r-head">
+    <div class="r-title">سوبر ماركت أبو سارة</div>
+    <div class="r-meta">الفرع الرئيسي — دمشق<br>هاتف: 0944000000</div>
+    <div class="r-meta" style="margin-top:3px;">
+      فاتورة: <span id="rInvId" class="tabular">#</span> | <span id="rDate"></span>
+    </div>
+    <div class="r-meta">العميل: <span id="rCust"></span></div>
+  </div>
+
+  <table class="r-table">
+    <thead>
+      <tr>
+        <th>الصنف</th>
+        <th class="r-num">الكمية</th>
+        <th class="r-num">السعر</th>
+        <th class="r-num">الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody id="rItemsBody"></tbody>
+  </table>
+
+  <div class="r-totals">
+    <div class="r-row grand"><span>الإجمالي:</span><span class="r-num" id="rTotal"></span></div>
+    <div class="r-row"><span>المدفوع:</span><span class="r-num" id="rPaid"></span></div>
+    <div class="r-row" id="rRemainRow" style="display:none;"><span>المتبقي آجل:</span><span class="r-num" id="rRemain"></span></div>
+  </div>
+
+  <div class="r-footer">
+    <div>شكراً لزيارتكم 🌿</div>
+    <div style="font-size:8.5px;color:#555;margin-top:2px;">الاستبدال خلال 3 أيام مع الفاتورة</div>
+    <div class="r-barcode-wrap">
+      <svg id="rBarcodeSvg"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========================================================
+   1. الإعداد وقاعدة البيانات
+   ======================================================== */
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const MAIN_BRANCH_ID = 'b1111111-1111-1111-1111-111111111111';
+
+const LOCAL_CATALOG = {
+  "1001": {
+    id: "a1111111-1111-1111-1111-111111111111",
+    name: "أرز أبو كأس 5 كغ",
+    units: [
+      { name: "كيس", multiplier: 1, retail: 135000, wholesale: 115000 },
+      { name: "طرد (4 أكياس)", multiplier: 4, retail: 530000, wholesale: 450000 }
+    ]
+  },
+  "1002": {
+    id: "a2222222-2222-2222-2222-222222222222",
+    name: "زيت ذرة 1.5 لتر",
+    units: [
+      { name: "قطعة", multiplier: 1, retail: 68000, wholesale: 58000 },
+      { name: "كرتونة (6 قطع)", multiplier: 6, retail: 400000, wholesale: 340000 }
+    ]
+  },
+  "1003": {
+    id: "a3333333-3333-3333-3333-333333333333",
+    name: "معجون طماطم علبة",
+    units: [
+      { name: "علبة", multiplier: 1, retail: 15000, wholesale: 12000 },
+      { name: "طرد (12 علبة)", multiplier: 12, retail: 170000, wholesale: 140000 }
+    ]
+  },
+  "1004": {
+    id: "a4444444-4444-4444-4444-444444444444",
+    name: "مسحوق غسيل 3 كغ",
+    units: [
+      { name: "كيس", multiplier: 1, retail: 190000, wholesale: 165000 },
+      { name: "طرد (4 أكياس)", multiplier: 4, retail: 740000, wholesale: 640000 }
+    ]
+  }
+};
+
+let invoiceItems = [];
+let priceMode = "retail";
+let payType = "full";
+let payMethod = "cash";
+let html5QrCode = null;
+let pendingCheckoutData = null;
+
+// إعادة المؤشر فوراً لخانة الباركود
+function focusBarcode(){
+  setTimeout(() => {
+    const input = document.getElementById('barcodeInput');
+    if(input) input.focus();
+  }, 100);
+}
+
+/* ========================================================
+   2. إدارة بنود الفاتورة
+   ======================================================== */
+function addItemByBarcode(code){
+  const clean = code.trim();
+  const prod = LOCAL_CATALOG[clean];
+  if(!prod){
+    alert('الصنف غير مسجل بالباركود: ' + clean);
+    focusBarcode();
+    return;
+  }
+  const existing = invoiceItems.find(i => i.barcode === clean && i.selectedUnitIndex === 0);
+  if(existing){
+    existing.qty += 1;
+  } else {
+    invoiceItems.push({
+      barcode: clean,
+      id: prod.id,
+      name: prod.name,
+      units: prod.units,
+      selectedUnitIndex: 0,
+      qty: 1
+    });
+  }
+  renderItems();
+  focusBarcode();
+}
+
+function handleUnitChange(idx, val){
+  invoiceItems[idx].selectedUnitIndex = parseInt(val);
+  renderItems();
+  focusBarcode();
+}
+
+function handleQtyInput(idx, val){
+  const num = parseFloat(val);
+  invoiceItems[idx].qty = (isNaN(num) || num <= 0) ? 1 : num;
+  renderItems();
+}
+
+function stepQty(idx, step){
+  const next = invoiceItems[idx].qty + step;
+  if(next > 0){
+    invoiceItems[idx].qty = next;
+    renderItems();
+  }
+  focusBarcode();
+}
+
+function deleteItem(idx){
+  invoiceItems.splice(idx, 1);
+  renderItems();
+  focusBarcode();
+}
+
+function renderItems(){
+  const container = document.getElementById('itemsContainer');
+  const emptyBox = document.getElementById('emptyItemsBox');
+
+  emptyBox.style.display = invoiceItems.length === 0 ? 'block' : 'none';
+  container.style.display = invoiceItems.length === 0 ? 'none' : 'block';
+
+  let grandTotal = 0;
+
+  container.innerHTML = invoiceItems.map((item, idx) => {
+    const unit = item.units[item.selectedUnitIndex];
+    const unitPrice = priceMode === 'wholesale' ? unit.wholesale : unit.retail;
+    const itemTotal = unitPrice * item.qty;
+    grandTotal += itemTotal;
+
+    const unitOptions = item.units.map((u, uIdx) => 
+      `<option value="${uIdx}" ${uIdx === item.selectedUnitIndex ? 'selected' : ''}>${u.name}</option>`
+    ).join('');
+
+    return `
+      <div class="item-card">
+        <div class="item-row-top">
+          <div class="item-name">${item.name}</div>
+          <button class="item-delete-btn" onclick="deleteItem(${idx})">✕</button>
+        </div>
+        <div class="item-row-bottom">
+          <select class="unit-select" onchange="handleUnitChange(${idx}, this.value)">
+            ${unitOptions}
+          </select>
+          <div class="qty-control">
+            <button class="qty-btn" onclick="stepQty(${idx}, -1)">−</button>
+            <input type="number" class="qty-input tabular" value="${item.qty}" min="1" inputmode="numeric" onchange="handleQtyInput(${idx}, this.value)">
+            <button class="qty-btn" onclick="stepQty(${idx}, 1)">+</button>
+          </div>
+          <div class="item-pricing">
+            <div class="item-unit-price tabular">${unitPrice.toLocaleString('ar-EG')} ل.س</div>
+            <div class="item-total-price tabular">${itemTotal.toLocaleString('ar-EG')} ل.س</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('subtotalDisplay').innerText = `${grandTotal.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('grandTotalDisplay').innerText = `${grandTotal.toLocaleString('ar-EG')} ل.س`;
+  window.currentGrandTotal = grandTotal;
+
+  recalculatePayment();
+}
+
+/* ========================================================
+   3. الحسابات وتحديث الأزرار
+   ======================================================== */
+function recalculatePayment(){
+  const total = window.currentGrandTotal || 0;
+  const paidNowInput = document.getElementById('paidNowInput');
+  const remainderDisplay = document.getElementById('remainderDisplay');
+  const directBtn = document.getElementById('directPrintBtn');
+  const waBtn = document.getElementById('whatsappPrintBtn');
+  const walletRef = document.getElementById('walletRefInput');
+
+  let paidNow = total;
+  let remainder = 0;
+
+  if(payType === 'partial'){
+    paidNow = parseFloat(paidNowInput.value) || 0;
+    if(paidNow > total) paidNow = total;
+    remainder = Math.max(total - paidNow, 0);
+    remainderDisplay.innerText = `${remainder.toLocaleString('ar-EG')} ل.س`;
+  }
+
+  let canSubmit = invoiceItems.length > 0;
+  if(payType === 'partial' && !document.getElementById('custPhoneInput').value.trim()){
+    canSubmit = false;
+  }
+  if(payMethod === 'wallet' && !walletRef.value.trim()){
+    canSubmit = false;
+  }
+
+  directBtn.disabled = !canSubmit;
+  waBtn.disabled = !canSubmit;
+}
+
+/* ========================================================
+   4. التحقق الهادئ من العميل (LED Dot)
+   ======================================================== */
+async function handlePhoneLookup(val){
+  const clean = val.trim();
+  const dot = document.getElementById('custStatusDot');
+
+  if(clean.length < 9){
+    dot.className = 'status-dot-indicator';
+    return;
+  }
+
+  try{
+    const { data: cust } = await db.from('customers').select('*').eq('phone', clean).maybeSingle();
+    if(cust){
+      document.getElementById('custNameInput').value = cust.name;
+      const debt = parseFloat(cust.current_debt || 0);
+      if(debt > 0){
+        dot.className = 'status-dot-indicator debt';
+        dot.title = `العميل مدين بمبلغ: ${debt.toLocaleString('ar-EG')} ل.س`;
+      } else {
+        dot.className = 'status-dot-indicator clean';
+        dot.title = 'حساب سليم — لا توجد ديون سابقة';
+      }
+    } else {
+      dot.className = 'status-dot-indicator new';
+      dot.title = 'عميل جديد';
+    }
+  }catch(e){
+    console.error(e);
+  }
+  recalculatePayment();
+}
+
+/* ========================================================
+   5. الكاميرا وقراءة الباركود
+   ======================================================== */
+function startCameraScanner(){
+  document.getElementById('scannerModal').classList.add('show');
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 230, height: 150 } },
+    (decodedText) => {
+      stopCameraScanner();
+      addItemByBarcode(decodedText);
+    },
+    () => {}
+  ).catch(err => {
+    alert("تعذر فتح الكاميرا: " + err);
+    stopCameraScanner();
+  });
+}
+
+function stopCameraScanner(){
+  if(html5QrCode){
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear();
+      document.getElementById('scannerModal').classList.remove('show');
+      focusBarcode();
+    }).catch(() => {
+      document.getElementById('scannerModal').classList.remove('show');
+      focusBarcode();
+    });
+  } else {
+    document.getElementById('scannerModal').classList.remove('show');
+    focusBarcode();
+  }
+}
+
+/* ========================================================
+   6. إتمام الفاتورة والطباعة وواتساب
+   ======================================================== */
+async function handleCheckout(actionType){
+  const total = window.currentGrandTotal || 0;
+  const custName = document.getElementById('custNameInput').value.trim() || 'زبون نقدي';
+  const custPhone = document.getElementById('custPhoneInput').value.trim() || '0000000000';
+  const paidNow = payType === 'partial' ? (parseFloat(document.getElementById('paidNowInput').value) || 0) : total;
+  const walletRef = document.getElementById('walletRefInput').value.trim() || null;
+
+  const payloadItems = invoiceItems.map(item => {
+    const unit = item.units[item.selectedUnitIndex];
+    return {
+      product_id: item.id,
+      product_name: item.name,
+      quantity: item.qty * unit.multiplier,
+      unit_label: unit.name,
+      unit_price: priceMode === 'wholesale' ? unit.wholesale : unit.retail,
+      item_total: (priceMode === 'wholesale' ? unit.wholesale : unit.retail) * item.qty
+    };
+  });
+
+  pendingCheckoutData = {
+    total, custName, custPhone, paidNow, walletRef, items: payloadItems,
+    remainder: Math.max(total - paidNow, 0)
+  };
+
+  if(actionType === 'whatsapp'){
+    document.getElementById('modalWhatsappPhone').value = custPhone !== '0000000000' ? custPhone : '';
+    document.getElementById('whatsappModal').classList.add('show');
+    setTimeout(() => document.getElementById('modalWhatsappPhone').focus(), 150);
+  } else {
+    executeInvoiceSaveAndPrint(false);
+  }
+}
+
+function closeWhatsappModal(){
+  document.getElementById('whatsappModal').classList.remove('show');
+  focusBarcode();
+}
+
+function confirmWhatsappAndPrint(){
+  const phone = document.getElementById('modalWhatsappPhone').value.trim();
+  if(!phone){
+    alert('يرجى إدخال رقم هاتف الواتساب');
+    return;
+  }
+  closeWhatsappModal();
+  executeInvoiceSaveAndPrint(true, phone);
+}
+
+async function executeInvoiceSaveAndPrint(sendWhatsapp = false, targetPhone = ''){
+  const d = pendingCheckoutData;
+  if(!d) return;
+
+  const btn1 = document.getElementById('directPrintBtn');
+  const btn2 = document.getElementById('whatsappPrintBtn');
+  btn1.disabled = true; btn2.disabled = true;
+  btn1.innerText = 'جاري الحفظ...';
+
+  try{
+    const { data, error } = await db.rpc('process_sale', {
+      p_branch_id: MAIN_BRANCH_ID,
+      p_customer_name: d.custName,
+      p_customer_phone: d.custPhone,
+      p_customer_type: priceMode === 'wholesale' ? 'wholesale' : 'retail',
+      p_price_mode: priceMode,
+      p_payment_type: payType,
+      p_payment_method: payMethod,
+      p_paid_amount: d.paidNow,
+      p_wallet_ref: d.walletRef,
+      p_discount: 0,
+      p_items: d.items.map(i => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+        unit_label: i.unit_label,
+        unit_price: i.unit_price
+      }))
+    });
+
+    if(error) throw error;
+
+    const invoiceId = data.invoice_id || 'INV-' + Math.floor(100000 + Math.random() * 900000);
+
+    prepareThermalReceipt(invoiceId, d);
+    window.print();
+
+    if(sendWhatsapp){
+      sendWhatsAppMessage(targetPhone || d.custPhone, invoiceId, d);
+    }
+
+    resetPosForm();
+
+  }catch(err){
+    console.error(err);
+    alert('خطأ في إتمام الفاتورة: ' + err.message);
+    focusBarcode();
+  } finally {
+    btn1.disabled = false; btn2.disabled = false;
+    btn1.innerText = '🖨️ إتمام وطباعة';
+    recalculatePayment();
+  }
+}
+
+function prepareThermalReceipt(invId, data){
+  document.getElementById('rInvId').innerText = invId;
+  document.getElementById('rDate').innerText = new Date().toLocaleTimeString('ar-SY', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('rCust').innerText = data.custName;
+  document.getElementById('rTotal').innerText = `${data.total.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('rPaid').innerText = `${data.paidNow.toLocaleString('ar-EG')} ل.س`;
+
+  const remRow = document.getElementById('rRemainRow');
+  if(data.remainder > 0){
+    remRow.style.display = 'flex';
+    document.getElementById('rRemain').innerText = `${data.remainder.toLocaleString('ar-EG')} ل.س`;
+  } else {
+    remRow.style.display = 'none';
+  }
+
+  const tbody = document.getElementById('rItemsBody');
+  tbody.innerHTML = data.items.map(i => `
+    <tr>
+      <td>${i.product_name} (${i.unit_label})</td>
+      <td class="r-num tabular">${i.quantity}</td>
+      <td class="r-num tabular">${i.unit_price.toLocaleString('ar-EG')}</td>
+      <td class="r-num tabular">${i.item_total.toLocaleString('ar-EG')}</td>
+    </tr>
+  `).join('');
+
+  JsBarcode("#rBarcodeSvg", String(invId), {
+    format: "CODE128",
+    width: 1.4,
+    height: 32,
+    displayValue: true,
+    fontSize: 9
+  });
+}
+
+function sendWhatsAppMessage(phone, invId, data){
+  let cleanPhone = phone.replace(/[^0-9]/g, '');
+  if(cleanPhone.startsWith('09')){
+    cleanPhone = '963' + cleanPhone.substring(1);
+  } else if(cleanPhone.startsWith('9') && cleanPhone.length === 9){
+    cleanPhone = '963' + cleanPhone;
+  }
+
+  let text = `*سوبر ماركت أبو سارة 🌿*\n`;
+  text += `فاتورة رقم: #${invId}\n`;
+  text += `التاريخ: ${new Date().toLocaleDateString('ar-SY')}\n`;
+  text += `---------------------------\n`;
+  data.items.forEach(i => {
+    text += `▪ ${i.product_name} (${i.unit_label}) × ${i.quantity} = ${i.item_total.toLocaleString('ar-EG')} ل.س\n`;
+  });
+  text += `---------------------------\n`;
+  text += `*الإجمالي:* ${data.total.toLocaleString('ar-EG')} ل.س\n`;
+  text += `*المدفوع:* ${data.paidNow.toLocaleString('ar-EG')} ل.س\n`;
+  if(data.remainder > 0){
+    text += `*المتبقي (آجل):* ${data.remainder.toLocaleString('ar-EG')} ل.س\n`;
+  }
+  text += `\nشكراً لزيارتكم!`;
+
+  const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
+
+function resetPosForm(){
+  invoiceItems = [];
+  document.getElementById('custPhoneInput').value = '';
+  document.getElementById('custNameInput').value = '';
+  document.getElementById('paidNowInput').value = '';
+  document.getElementById('walletRefInput').value = '';
+  document.getElementById('custStatusDot').className = 'status-dot-indicator';
+  document.getElementById('barcodeInput').value = '';
+  renderItems();
+  focusBarcode();
+}
+
+/* ========================================================
+   7. الأحداث وبدء التشغيل التلقائي
+   ======================================================== */
+window.addEventListener('DOMContentLoaded', () => {
+  focusBarcode();
+});
+
+// إعادة التركيز لخانة الباركود بمجرد نقر الكاشير على أي مساحة فارغة
+document.addEventListener('click', (e) => {
+  const isInput = e.target.closest('input, select, button, .modal-card');
+  if(!isInput){
+    focusBarcode();
+  }
+});
+
+document.getElementById('barcodeInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if(e.target.value){
+      addItemByBarcode(e.target.value);
+      e.target.value = '';
+    }
+  }
+});
+
+document.querySelectorAll('#priceToggle button').forEach(b => {
+  b.addEventListener('click', (e) => {
+    document.querySelectorAll('#priceToggle button').forEach(el => el.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    priceMode = e.currentTarget.dataset.mode;
+    renderItems();
+    focusBarcode();
+  });
+});
+
+document.querySelectorAll('#payTypeToggle button').forEach(b => {
+  b.addEventListener('click', (e) => {
+    document.querySelectorAll('#payTypeToggle button').forEach(el => el.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    payType = e.currentTarget.dataset.type;
+    document.getElementById('partialBlock').classList.toggle('show', payType === 'partial');
+    recalculatePayment();
+    focusBarcode();
+  });
+});
+document.getElementById('paidNowInput').addEventListener('input', recalculatePayment);
+
+document.querySelectorAll('#payMethods .pm-btn').forEach(b => {
+  b.addEventListener('click', (e) => {
+    document.querySelectorAll('#payMethods .pm-btn').forEach(el => el.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    payMethod = e.currentTarget.dataset.method;
+    document.getElementById('walletBlock').classList.toggle('show', payMethod === 'wallet');
+    recalculatePayment();
+    focusBarcode();
+  });
+});
+document.getElementById('walletRefInput').addEventListener('input', recalculatePayment);
+</script>
+
+</body>
+</html>
