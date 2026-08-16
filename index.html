@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام سوق الأمانة — نقاط البيع والمخزون</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+<!-- Supabase JS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1C2B33;
+    --ink-soft:#3C4C54;
+    --paper:#F7F5F0;
+    --card:#FFFFFF;
+    --brass:#B8862E;
+    --brass-deep:#8F6A22;
+    --sage:#4F7A63;
+    --sage-bg:#EAF1EC;
+    --clay:#B23B3B;
+    --clay-bg:#F7E9E7;
+    --line:#E4DED0;
+    --line-soft:#EFEBE0;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Almarai', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Tajawal',sans-serif;}
+  .tabular{font-variant-numeric: tabular-nums;}
+
+  .app{max-width:480px; margin:0 auto; min-height:100vh; background:var(--paper); position:relative; border-inline:1px solid var(--line-soft);}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 16px 14px;background:var(--ink);color:#fff;
+    border-radius:0 0 20px 20px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:36px;height:36px;border-radius:10px;background:var(--brass);
+    display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:800;color:var(--ink);
+  }
+  .brand-name{font-family:'Tajawal';font-weight:800;font-size:15px;line-height:1.2;}
+  .branch-pill{font-size:11px;color:#D9CBA8;display:flex;align-items:center;gap:4px;margin-top:2px;}
+  .topbar-right{display:flex;align-items:center;gap:10px;}
+  .icon-btn{
+    width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.1);
+    display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;
+  }
+  .badge{position:absolute;top:-4px;left:-4px;background:var(--clay);color:#fff;font-size:9px;font-weight:800;border-radius:20px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+
+  .new-sale-cta{
+    margin:14px 16px 0;padding:15px;border-radius:var(--radius);
+    background:var(--brass);color:#fff;display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 6px 16px -6px rgba(184,134,46,.55);cursor:pointer;
+  }
+  .new-sale-cta .txt{font-family:'Tajawal';font-weight:800;font-size:15.5px;}
+  .new-sale-cta .sub{font-size:11.5px;opacity:.9;margin-top:2px;font-weight:400;font-family:'Almarai';}
+  .new-sale-cta .arrow{width:34px;height:34px;background:rgba(255,255,255,.22);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px 4px;}
+  .kpi{
+    background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);
+    padding:12px 13px;position:relative;overflow:hidden;
+  }
+  .kpi::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%;background:var(--tone,var(--brass));}
+  .kpi .label{font-size:11.5px;color:var(--ink-soft);font-weight:700;}
+  .kpi .value{font-family:'Tajawal';font-weight:800;font-size:20px;margin-top:5px;}
+  .kpi .value.alert{color:var(--clay);}
+  .kpi .sub{font-size:10.5px;color:#8A8478;margin-top:2px;}
+
+  .section-label{
+    display:flex;align-items:center;gap:8px;padding:18px 16px 8px;
+  }
+  .section-label .dash{width:14px;height:3px;background:var(--brass);border-radius:2px;}
+  .section-label h2{font-size:14.5px;margin:0;font-weight:700;color:var(--ink-soft);letter-spacing:.2px;}
+
+  .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px;}
+  .cat-item{
+    display:flex;flex-direction:column;align-items:center;gap:7px;
+    padding:12px 4px;border-radius:12px;background:var(--card);border:1px solid var(--line-soft);cursor:pointer;
+  }
+  .cat-icon{
+    width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    background:var(--tone-bg,var(--sage-bg)); color:var(--tone,var(--sage));
+  }
+  .cat-item span{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-align:center;}
+
+  .activity{padding:0 16px 20px;}
+  .act-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 0;border-bottom:1px solid var(--line-soft);
+  }
+  .act-row:last-child{border-bottom:none;}
+  .act-left{display:flex;align-items:center;gap:10px;}
+  .act-dot{width:8px;height:8px;border-radius:50%;background:var(--sage);}
+  .act-name{font-size:13px;font-weight:700;}
+  .act-meta{font-size:11px;color:#9A9384;margin-top:1px;}
+  .act-amount{font-family:'Tajawal';font-weight:800;font-size:13.5px;}
+
+  .bottom-nav{
+    position:sticky;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line-soft);
+    padding:8px 6px 10px;z-index:10;
+  }
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#A39C8D;cursor:pointer;}
+  .nav-item.active{color:var(--ink);}
+  .nav-item span{font-size:10px;font-weight:700;}
+
+  /* Sale Screen */
+  .sale-header{
+    padding:14px 16px 12px;background:var(--ink);color:#fff;
+    border-radius:0 0 20px 20px;
+  }
+  .sale-header-top{display:flex;align-items:center;justify-content:space-between;}
+  .back-btn{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .sale-title{font-family:'Tajawal';font-weight:800;font-size:16px;}
+
+  .search-wrap{display:flex;gap:8px;margin-top:12px;}
+  .search-box{
+    flex:1;background:rgba(255,255,255,.12);border-radius:12px;display:flex;align-items:center;gap:8px;
+    padding:11px 12px;
+  }
+  .search-box input{
+    background:transparent;border:none;outline:none;color:#fff;font-family:'Almarai';font-size:13.5px;flex:1;
+  }
+  .search-box input::placeholder{color:#B9C1C4;}
+  .scan-btn{
+    width:42px;height:42px;background:var(--brass);border-radius:12px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;
+  }
+
+  .price-toggle{
+    display:flex;background:rgba(255,255,255,.1);border-radius:12px;padding:4px;margin-top:10px;
+  }
+  .price-toggle button{
+    flex:1;border:none;background:transparent;color:#C6CBCC;padding:9px 0;border-radius:9px;
+    font-family:'Tajawal';font-weight:800;font-size:13px;cursor:pointer;
+  }
+  .price-toggle button.active{background:var(--brass);color:#fff;}
+
+  .customer-block{
+    margin:14px 16px 0;padding:13px;border-radius:var(--radius);
+    background:var(--clay-bg);border:1.5px dashed var(--clay);
+  }
+  .customer-block .cb-title{
+    display:flex;align-items:center;gap:6px;font-family:'Tajawal';font-weight:800;font-size:12.5px;color:var(--clay);margin-bottom:9px;
+  }
+  .cb-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .cb-field label{font-size:10.5px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  .cb-field input{
+    width:100%;padding:9px 10px;border-radius:9px;border:1px solid #E3BDBD;background:#fff;
+    font-family:'Almarai';font-size:13px;outline:none;
+  }
+  .cb-field input:focus{border-color:var(--clay);}
+  .cb-hint{font-size:10px;color:#9C6262;margin-top:7px;}
+
+  .cart-section{padding:14px 16px 4px;}
+  .cart-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .cart-title h3{font-size:13.5px;margin:0;font-family:'Tajawal';font-weight:800;}
+  .cart-title .count{font-size:11px;color:#9A9384;}
+
+  .empty-cart{
+    padding:34px 10px;text-align:center;background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);
+  }
+  .empty-cart .em-icon{margin-bottom:8px;color:#C9C2B2;}
+  .empty-cart p{margin:0;font-size:12.5px;color:#A39C8D;}
+
+  .cart-item{
+    display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line-soft);
+    border-radius:12px;padding:10px 11px;margin-bottom:8px;
+  }
+  .ci-thumb{width:38px;height:38px;border-radius:9px;background:var(--sage-bg);color:var(--sage);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
+  .ci-info{flex:1;min-width:0;}
+  .ci-name{font-size:12.5px;font-weight:700;}
+  .ci-price{font-size:10.5px;color:#9A9384;margin-top:1px;}
+  .ci-qty{display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:9px;padding:4px 6px;}
+  .ci-qty button{width:20px;height:20px;border:none;background:var(--line-soft);border-radius:6px;font-weight:800;color:var(--ink);cursor:pointer;}
+  .ci-qty .n{font-size:12.5px;font-weight:800;min-width:14px;text-align:center;}
+  .ci-total{font-family:'Tajawal';font-weight:800;font-size:12.5px;min-width:52px;text-align:left;}
+
+  .sale-summary{padding:12px 16px 0;}
+  .sum-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:4px 0;}
+  .sum-row.total{
+    font-family:'Tajawal';font-weight:800;font-size:16px;color:var(--ink);
+    border-top:1px dashed var(--line);margin-top:6px;padding-top:9px;
+  }
+
+  .pay-methods{display:flex;gap:8px;padding:12px 16px 0;}
+  .pm-btn{
+    flex:1;padding:10px 4px;border-radius:11px;border:1px solid var(--line);background:var(--card);
+    text-align:center;font-size:11.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;
+  }
+  .pm-btn.active{border-color:var(--brass);background:#FBF3E6;color:var(--brass-deep);}
+
+  .pay-type-toggle{
+    display:flex;background:var(--card);border:1px solid var(--line-soft);border-radius:12px;padding:4px;margin:12px 16px 0;
+  }
+  .pay-type-toggle button{
+    flex:1;border:none;background:transparent;color:var(--ink-soft);padding:9px 0;border-radius:9px;
+    font-family:'Tajawal';font-weight:800;font-size:12.5px;cursor:pointer;
+  }
+  .pay-type-toggle button.active{background:var(--ink);color:#fff;}
+
+  .partial-block{
+    display:none;margin:10px 16px 0;padding:12px 13px;border-radius:var(--radius);
+    background:var(--card);border:1px solid var(--line-soft);
+  }
+  .partial-block.show{display:block;}
+  .partial-block label{font-size:11px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:6px;}
+  .partial-row{display:flex;align-items:center;gap:8px;}
+  .partial-row input{
+    flex:1;padding:10px 11px;border-radius:10px;border:1px solid var(--line);
+    font-family:'Almarai';font-size:14px;font-weight:700;outline:none;
+  }
+  .partial-row input:focus{border-color:var(--brass);}
+  .partial-row .curr{font-size:12px;color:#9A9384;font-weight:700;}
+  .remainder-strip{
+    display:flex;justify-content:space-between;align-items:center;margin-top:10px;
+    padding:9px 11px;background:var(--clay-bg);border-radius:9px;
+  }
+  .remainder-strip .rl{font-size:11px;font-weight:700;color:var(--clay);}
+  .remainder-strip .rv{font-family:'Tajawal';font-weight:800;font-size:14px;color:var(--clay);}
+  .remainder-strip.zero{background:var(--sage-bg);}
+  .remainder-strip.zero .rl,.remainder-strip.zero .rv{color:var(--sage);}
+  .partial-hint{font-size:10px;color:#9A9384;margin-top:8px;line-height:1.5;}
+
+  .wallet-block{
+    display:none;margin:10px 16px 0;padding:12px 13px;border-radius:var(--radius);
+    background:#EEF3F8;border:1.5px dashed #6E8FB0;
+  }
+  .wallet-block.show{display:block;}
+  .wallet-block label{
+    display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:#3E5E7C;font-family:'Tajawal';margin-bottom:7px;
+  }
+  .wallet-block input{
+    width:100%;padding:10px 11px;border-radius:9px;border:1px solid #B9CCDD;background:#fff;
+    font-family:'Almarai';font-size:13px;outline:none;
+  }
+  .wallet-block input:focus{border-color:#3E5E7C;}
+  .wallet-block .wb-hint{font-size:10px;color:#6E86A0;margin-top:6px;}
+
+  .checkout-bar{
+    position:sticky;bottom:0;padding:12px 16px 16px;background:var(--paper);z-index:5;
+  }
+  .checkout-btn{
+    width:100%;background:var(--sage);color:#fff;border:none;border-radius:14px;padding:15px;
+    font-family:'Tajawal';font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 20px -8px rgba(79,122,99,.6);cursor:pointer;
+  }
+  .checkout-btn:disabled{opacity:0.6;cursor:not-allowed;}
+
+  .match-card{
+    display:none;align-items:center;gap:10px;margin-top:10px;padding:10px 11px;
+    background:var(--sage-bg);border:1px solid #CFE1D6;border-radius:11px;
+  }
+  .match-card.show{display:flex;}
+  .match-card.debt{background:var(--clay-bg);border-color:#E3BDBD;}
+  .match-avatar{
+    width:34px;height:34px;border-radius:50%;background:var(--sage);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:800;font-size:13px;flex-shrink:0;
+  }
+  .match-card.debt .match-avatar{background:var(--clay);}
+  .match-info{flex:1;min-width:0;}
+  .match-name{font-size:12.5px;font-weight:800;font-family:'Tajawal';}
+  .match-meta{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+  .match-balance{font-family:'Tajawal';font-weight:800;font-size:12.5px;color:var(--sage);white-space:nowrap;}
+  .match-card.debt .match-balance{color:var(--clay);}
+  .match-link{font-size:10px;color:var(--ink-soft);text-decoration:underline;margin-right:4px;cursor:pointer;}
+  .new-badge{
+    display:none;margin-top:9px;font-size:10.5px;color:var(--brass-deep);background:#FBF3E6;
+    border:1px solid #EAD3A3;border-radius:9px;padding:7px 10px;align-items:center;gap:6px;
+  }
+  .new-badge.show{display:flex;}
+
+  /* Customer Statement */
+  .cust-header{padding:14px 16px 16px;background:var(--ink);color:#fff;border-radius:0 0 20px 20px;}
+  .cust-id-row{display:flex;align-items:center;gap:12px;margin-top:14px;}
+  .cust-avatar-lg{
+    width:52px;height:52px;border-radius:50%;background:var(--brass);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:800;font-size:18px;flex-shrink:0;
+  }
+  .cust-name-lg{font-family:'Tajawal';font-weight:800;font-size:16.5px;}
+  .cust-phone-lg{font-size:11.5px;color:#C7CDCF;margin-top:2px;}
+  .cust-type-badge{
+    display:inline-block;margin-top:6px;font-size:10px;font-weight:700;background:rgba(255,255,255,.12);
+    padding:3px 9px;border-radius:20px;
+  }
+  .balance-strip{
+    display:flex;margin:14px 16px 0;background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden;
+  }
+  .balance-cell{flex:1;padding:13px 10px;text-align:center;}
+  .balance-cell + .balance-cell{border-right:1px solid var(--line-soft);}
+  .balance-cell .bl{font-size:10.5px;color:#9A9384;font-weight:700;}
+  .balance-cell .bv{font-family:'Tajawal';font-weight:800;font-size:15px;margin-top:4px;}
+  .balance-cell .bv.debt{color:var(--clay);}
+  .balance-cell .bv.limit{color:var(--ink-soft);}
+
+  .pay-debt-btn{
+    margin:12px 16px 0;width:calc(100% - 32px);background:var(--brass);color:#fff;border:none;
+    padding:12px;border-radius:12px;font-family:'Tajawal';font-weight:800;font-size:13.5px;
+    display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;
+  }
+
+  .ledger-list{padding:6px 16px 20px;}
+  .ledger-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line-soft);}
+  .ledger-item:last-child{border-bottom:none;}
+  .ledger-icon{
+    width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    background:var(--clay-bg);color:var(--clay);
+  }
+  .ledger-icon.pay{background:var(--sage-bg);color:var(--sage);}
+  .ledger-info{flex:1;min-width:0;}
+  .ledger-title{font-size:12.5px;font-weight:700;}
+  .ledger-meta{font-size:10.5px;color:#9A9384;margin-top:1px;}
+  .ledger-right{text-align:left;}
+  .ledger-amount{font-family:'Tajawal';font-weight:800;font-size:12.5px;}
+  .ledger-amount.debt{color:var(--clay);}
+  .ledger-amount.pay{color:var(--sage);}
+  .ledger-after{font-size:9.5px;color:#B0A99B;margin-top:1px;}
+
+  /* Invoice */
+  .inv-toolbar{display:flex;gap:8px;padding:12px 16px;background:var(--paper);}
+  .inv-toolbar button{
+    flex:1;padding:11px;border-radius:11px;border:none;font-family:'Tajawal';font-weight:800;font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  }
+  .btn-print{background:var(--ink);color:#fff;}
+  .btn-whatsapp{background:var(--sage);color:#fff;}
+  .invoice-sheet{
+    margin:0 16px 20px;background:var(--card);border:1px solid var(--line-soft);border-radius:16px;
+    overflow:hidden;box-shadow:0 10px 30px -14px rgba(28,43,51,.18);
+  }
+  .inv-band{height:6px;background:linear-gradient(90deg,var(--brass),var(--sage));}
+  .inv-head{padding:20px 20px 16px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px dashed var(--line);}
+  .inv-store{display:flex;gap:11px;align-items:center;}
+  .inv-store-mark{
+    width:46px;height:46px;border-radius:12px;background:var(--ink);color:var(--brass);
+    display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:800;font-size:18px;flex-shrink:0;
+  }
+  .inv-store-name{font-family:'Tajawal';font-weight:800;font-size:16px;color:var(--ink);}
+  .inv-store-meta{font-size:10.5px;color:#9A9384;margin-top:3px;line-height:1.6;}
+  .inv-badge{text-align:left;}
+  .inv-badge .inv-label{font-size:10px;color:#9A9384;font-weight:700;}
+  .inv-badge .inv-number{font-family:'Tajawal';font-weight:800;font-size:14px;color:var(--brass-deep);margin-top:2px;}
+  .inv-status{display:inline-block;margin-top:7px;font-size:9.5px;font-weight:800;padding:4px 10px;border-radius:20px;}
+  .inv-status.partial{background:var(--clay-bg);color:var(--clay);}
+  .inv-status.paid{background:var(--sage-bg);color:var(--sage);}
+
+  .inv-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;padding:14px 20px;border-bottom:1px dashed var(--line);}
+  .inv-meta-item .ml{font-size:9.5px;color:#9A9384;font-weight:700;}
+  .inv-meta-item .mv{font-size:12px;font-weight:700;color:var(--ink);margin-top:2px;}
+  .inv-customer{padding:13px 20px;background:#FBFAF6;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;}
+  .inv-customer .cl{font-size:9.5px;color:#9A9384;font-weight:700;}
+  .inv-customer .cn{font-family:'Tajawal';font-weight:800;font-size:13.5px;margin-top:2px;}
+  .inv-customer .cp{font-size:11px;color:var(--ink-soft);margin-top:1px;}
+  .inv-cust-type{font-size:9.5px;font-weight:800;background:#FBF3E6;color:var(--brass-deep);padding:4px 9px;border-radius:20px;}
+
+  .inv-table{width:100%;border-collapse:collapse;}
+  .inv-table thead th{font-size:10px;color:#9A9384;font-weight:700;text-align:right;padding:10px 20px;background:#FBFAF6;}
+  .inv-table thead th.num{text-align:left;}
+  .inv-table tbody td{padding:11px 20px;font-size:12px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  .inv-table tbody td.num{text-align:left;font-family:'Tajawal';font-weight:700;white-space:nowrap;}
+  .inv-item-name{font-weight:700;color:var(--ink);}
+  .inv-item-sub{font-size:10px;color:#9A9384;margin-top:1px;}
+
+  .inv-totals{padding:14px 20px;}
+  .inv-t-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:5px 0;}
+  .inv-t-row .v{font-family:'Tajawal';font-weight:700;}
+  .inv-t-row.grand{
+    border-top:1.5px solid var(--ink);margin-top:6px;padding-top:10px;
+    font-family:'Tajawal';font-weight:800;font-size:17px;color:var(--ink);
+  }
+  .inv-t-row.paid .v{color:var(--sage);}
+  .inv-t-row.remain .v{color:var(--clay);}
+
+  .inv-pay-strip{
+    margin:6px 20px 0;padding:11px 13px;border-radius:11px;background:var(--clay-bg);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .inv-pay-strip .pl{font-size:11px;font-weight:800;color:var(--clay);}
+  .inv-pay-strip .pv{font-family:'Tajawal';font-weight:800;font-size:13px;color:var(--clay);}
+  .inv-footer{padding:16px 20px 20px;text-align:center;border-top:1px dashed var(--line);margin-top:10px;}
+  .inv-footer .thanks{font-family:'Tajawal';font-weight:800;font-size:13px;color:var(--ink);}
+  .inv-footer .note{font-size:10px;color:#9A9384;margin-top:4px;line-height:1.6;}
+  .inv-footer .sy-note{font-size:9.5px;color:#B0A99B;margin-top:10px;}
+
+  /* Generic List/Products */
+  .std-header{padding:14px 16px 14px;background:var(--ink);color:#fff;border-radius:0 0 20px 20px;}
+  .std-title-row{display:flex;align-items:center;justify-content:space-between;}
+  .std-add-btn{width:32px;height:32px;border-radius:10px;background:var(--brass);display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;}
+  .filter-row{display:flex;gap:8px;padding:12px 16px 0;overflow-x:auto;}
+  .filter-chip{
+    flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;cursor:pointer;
+  }
+  .filter-chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .branch-select-row{display:flex;gap:8px;padding:12px 16px 0;}
+  .branch-chip{
+    flex:1;padding:9px 6px;text-align:center;border-radius:11px;border:1px solid var(--line);background:var(--card);
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;
+  }
+  .branch-chip.active{border-color:var(--brass);background:#FBF3E6;color:var(--brass-deep);}
+
+  .list-body{padding:12px 16px 90px;}
+  .prow{
+    display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line-soft);
+    border-radius:13px;padding:11px 12px;margin-bottom:9px;cursor:pointer;
+  }
+  .prow-thumb{width:42px;height:42px;border-radius:11px;background:var(--sage-bg);color:var(--sage);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
+  .prow-info{flex:1;min-width:0;}
+  .prow-name{font-size:13px;font-weight:700;}
+  .prow-meta{font-size:10.5px;color:#9A9384;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;}
+  .prow-right{text-align:left;flex-shrink:0;}
+  .prow-price{font-family:'Tajawal';font-weight:800;font-size:12.5px;}
+  .stock-pill{margin-top:5px;font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:20px;display:inline-block;}
+  .stock-pill.ok{background:var(--sage-bg);color:var(--sage);}
+  .stock-pill.low{background:var(--clay-bg);color:var(--clay);}
+
+  @media print{
+    .bottom-nav,.topbar,.new-sale-cta,.kpis,.section-label,.cat-grid,.activity,.inv-toolbar{display:none !important;}
+    body,.app{background:#fff;}
+    .invoice-sheet{box-shadow:none;border:none;margin:0;}
+    #dash,#sale,#statement,#products{display:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ 1. DASHBOARD ============ -->
+  <div class="screen active" id="dash">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">س</div>
+        <div>
+          <div class="brand-name">سوق الأمانة</div>
+          <div class="branch-pill" id="currentBranchLabel">فرع الوسط ▾</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="icon-btn">🔔<span class="badge">0</span></div>
+        <div class="icon-btn">👤</div>
+      </div>
+    </div>
+
+    <div class="new-sale-cta" onclick="showScreen('sale')">
+      <div>
+        <div class="txt">🛒 بيع جديد</div>
+        <div class="sub">ابدأ فاتورة سريعة للعميل</div>
+      </div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi" style="--tone:var(--brass)">
+        <div class="label">مبيعات اليوم</div>
+        <div class="value tabular" id="dashTodaySales">0 ₪</div>
+        <div class="sub" id="dashInvoicesCount">0 فواتير</div>
+      </div>
+      <div class="kpi" style="--tone:var(--sage)">
+        <div class="label">صافي الصندوق</div>
+        <div class="value tabular" id="dashCashbox">0 ₪</div>
+        <div class="sub">تحديث لحظي</div>
+      </div>
+      <div class="kpi" style="--tone:var(--clay)">
+        <div class="label">نواقص مخزون</div>
+        <div class="value tabular alert" id="dashLowStock">0</div>
+        <div class="sub">تحت حد الطلب</div>
+      </div>
+      <div class="kpi" style="--tone:var(--clay)">
+        <div class="label">إجمالي الديون</div>
+        <div class="value tabular alert" id="dashTotalDebt">0 ₪</div>
+        <div class="sub">مستحقات على العملاء</div>
+      </div>
+    </div>
+
+    <div class="section-label"><div class="dash"></div><h2>الأقسام</h2></div>
+    <div class="cat-grid">
+      <div class="cat-item" onclick="showScreen('sale')"><div class="cat-icon" style="--tone:var(--brass);--tone-bg:#FBF3E6">🛒</div><span>المبيعات</span></div>
+      <div class="cat-item" onclick="showScreen('products')"><div class="cat-icon">📦</div><span>المخزون</span></div>
+      <div class="cat-item" onclick="showScreen('statement')"><div class="cat-icon" style="--tone:#9A6FB0;--tone-bg:#F2EAF8">👥</div><span>العملاء</span></div>
+      <div class="cat-item"><div class="cat-icon" style="--tone:var(--clay);--tone-bg:var(--clay-bg)">💰</div><span>الصندوق</span></div>
+    </div>
+
+    <div class="section-label"><div class="dash"></div><h2>آخر الفواتير المكتملة</h2></div>
+    <div class="activity" id="recentInvoicesList">
+      <div style="text-align:center;padding:20px;font-size:12px;color:#999;">جاري جلب الفواتير...</div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="showScreen('dash')">🏠<span>الرئيسية</span></div>
+      <div class="nav-item" onclick="showScreen('sale')">🛒<span>بيع</span></div>
+      <div class="nav-item" onclick="showScreen('products')">📦<span>المخزون</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 2. NEW SALE ============ -->
+  <div class="screen" id="sale">
+    <div class="sale-header">
+      <div class="sale-header-top">
+        <div class="back-btn" onclick="showScreen('dash')">→</div>
+        <div class="sale-title">فاتورة جديدة</div>
+        <div style="width:32px"></div>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-box">
+          🔍<input type="text" id="barcodeInput" placeholder="اكتب الباركود أو اسم الصنف واضغط Enter..." inputmode="text">
+        </div>
+        <div class="scan-btn" onclick="document.getElementById('barcodeInput').focus()">📷</div>
+      </div>
+
+      <div class="price-toggle" id="priceToggle">
+        <button class="active" data-mode="retail">سعر المفرق</button>
+        <button data-mode="wholesale">سعر الجملة</button>
+      </div>
+    </div>
+
+    <!-- Customer Block -->
+    <div class="customer-block">
+      <div class="cb-title">⚠️ بيانات العميل (إلزامية للبيع الآجل)</div>
+      <div class="cb-fields">
+        <div class="cb-field">
+          <label>اسم العميل *</label>
+          <input type="text" id="customerNameInput" placeholder="مثال: أبو أحمد">
+        </div>
+        <div class="cb-field">
+          <label>رقم الهاتف *</label>
+          <input type="tel" id="customerPhoneInput" placeholder="05xxxxxxxx" oninput="checkPhoneLive(this.value)">
+        </div>
+      </div>
+      <div class="cb-hint">أدخل هاتف العميل لمطابقة حسابه وسجل ديونه تلقائياً</div>
+
+      <div class="match-card" id="matchClean">
+        <div class="match-avatar" id="cleanAvatar">✓</div>
+        <div class="match-info">
+          <div class="match-name" id="cleanName">عميل مسجل</div>
+          <div class="match-meta">لا توجد ديون مستحقة</div>
+        </div>
+        <div class="match-balance">✓ رصيد سليم</div>
+      </div>
+
+      <div class="match-card debt" id="matchDebt">
+        <div class="match-avatar" id="debtAvatar">!</div>
+        <div class="match-info">
+          <div class="match-name" id="debtName">عميل مدين</div>
+          <div class="match-meta"><span class="match-link" onclick="openCustomerStatement()">عرض كشف الحساب ←</span></div>
+        </div>
+        <div class="match-balance" id="debtBalanceValue">0 ₪ دين</div>
+      </div>
+
+      <div class="new-badge" id="newBadge">
+        ➕ رقم جديد — سيُسجل هذا العميل تلقائياً عند حفظ الفاتورة
+      </div>
+    </div>
+
+    <!-- Cart -->
+    <div class="cart-section">
+      <div class="cart-title"><h3>سلة المشتريات</h3><span class="count" id="cartCount">0 أصناف</span></div>
+      <div class="cart-items" id="cartItems"></div>
+      <div class="empty-cart" id="emptyCart">
+        <div class="em-icon">🛒</div>
+        <p>السلة فارغة — أدخل الباركود أو اختر صنفاً من قسم المخزون</p>
+      </div>
+    </div>
+
+    <div class="sale-summary">
+      <div class="sum-row"><span>المجموع الفرعي</span><span class="tabular" id="subtotalDisplay">0 ₪</span></div>
+      <div class="sum-row"><span>الخصم</span><span class="tabular" id="discountDisplay">0 ₪</span></div>
+      <div class="sum-row total"><span>الإجمالي النهائي</span><span class="tabular" id="grandTotalDisplay">0 ₪</span></div>
+    </div>
+
+    <div class="pay-type-toggle" id="payTypeToggle">
+      <button class="active" data-type="full">دفع كامل</button>
+      <button data-type="partial">دفع جزئي (والباقي آجل)</button>
+    </div>
+
+    <div class="partial-block" id="partialBlock">
+      <label>المبلغ المدفوع الآن نقداً / تحويل</label>
+      <div class="partial-row">
+        <input type="number" id="paidNowInput" placeholder="0" min="0" step="0.5">
+        <span class="curr">₪</span>
+      </div>
+      <div class="remainder-strip" id="remainderStrip">
+        <span class="rl">المتبقي يُسجل كدين:</span>
+        <span class="rv tabular" id="remainderValue">0 ₪</span>
+      </div>
+      <div class="partial-hint">⚠ سيتم ترحيل الدين فوراً إلى كشف حساب العميل وقاعدة البيانات.</div>
+    </div>
+
+    <div class="pay-methods" id="payMethods">
+      <div class="pm-btn active" data-method="cash">💵 نقدي</div>
+      <div class="pm-btn" data-method="wallet">📱 محفظة</div>
+      <div class="pm-btn" data-method="card">💳 بطاقة</div>
+    </div>
+
+    <div class="wallet-block" id="walletBlock">
+      <label>📱 رقم / مرجع عملية التحويل *</label>
+      <input type="text" id="walletRefInput" placeholder="مثال: TRX-998822">
+    </div>
+
+    <div class="checkout-bar">
+      <button class="checkout-btn" id="checkoutBtn" disabled onclick="executeSaleProcess()">✔ إتمام البيع — 0 ₪</button>
+    </div>
+  </div>
+
+  <!-- ============ 3. INVOICE DOCUMENT ============ -->
+  <div class="screen" id="invoice">
+    <div class="sale-header" style="border-radius:0 0 20px 20px;">
+      <div class="sale-header-top">
+        <div class="back-btn" onclick="showScreen('dash')">→</div>
+        <div class="sale-title">الفاتورة المكتملة</div>
+        <div style="width:32px"></div>
+      </div>
+    </div>
+
+    <div class="inv-toolbar">
+      <button class="btn-print" onclick="window.print()">🖨 طباعة الفاتورة</button>
+      <button class="btn-whatsapp" onclick="shareWhatsapp()">📲 إرسال واتساب</button>
+    </div>
+
+    <div class="invoice-sheet" id="invoicePrintArea">
+      <div class="inv-band"></div>
+      <div class="inv-head">
+        <div class="inv-store">
+          <div class="inv-store-mark">س</div>
+          <div>
+            <div class="inv-store-name">سوق الأمانة</div>
+            <div class="inv-store-meta">فرع الوسط — دمشق<br>هاتف: 011-2223344</div>
+          </div>
+        </div>
+        <div class="inv-badge">
+          <div class="inv-label">رقم الفاتورة</div>
+          <div class="inv-number tabular" id="invNumDisplay">#INV-0000</div>
+          <div class="inv-status" id="invStatusBadge">دفع كامل</div>
+        </div>
+      </div>
+
+      <div class="inv-meta-grid">
+        <div class="inv-meta-item">
+          <div class="ml">التاريخ والوقت</div>
+          <div class="mv tabular" id="invDateDisplay">--</div>
+        </div>
+        <div class="inv-meta-item">
+          <div class="ml">نوع التسعير</div>
+          <div class="mv" id="invPriceModeDisplay">مفرق</div>
+        </div>
+      </div>
+
+      <div class="inv-customer">
+        <div>
+          <div class="cl">العميل</div>
+          <div class="cn" id="invCustomerName">زبون عام</div>
+          <div class="cp tabular" id="invCustomerPhone">--</div>
+        </div>
+        <div class="inv-cust-type" id="invCustomerType">عميل مفرق</div>
+      </div>
+
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>الصنف</th>
+            <th class="num">الكمية</th>
+            <th class="num">السعر</th>
+            <th class="num">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody id="invTableBody"></tbody>
+      </table>
+
+      <div class="inv-totals">
+        <div class="inv-t-row"><span>المجموع</span><span class="v tabular" id="invSubtotal">0 ₪</span></div>
+        <div class="inv-t-row grand"><span>الإجمالي النهائي</span><span class="v tabular" id="invTotal">0 ₪</span></div>
+        <div class="inv-t-row paid"><span>المدفوع</span><span class="v tabular" id="invPaid">0 ₪</span></div>
+        <div class="inv-t-row remain"><span>المتبقي (آجل)</span><span class="v tabular" id="invRemain">0 ₪</span></div>
+      </div>
+
+      <div class="inv-footer">
+        <div class="thanks">شكراً لتعاملكم معنا 🌿</div>
+        <div class="note">يرجى مراجعة البضاعة والفاتورة قبل الاستلام.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 4. PRODUCTS & INVENTORY ============ -->
+  <div class="screen" id="products">
+    <div class="std-header">
+      <div class="std-title-row">
+        <div class="back-btn" onclick="showScreen('dash')">→</div>
+        <div class="sale-title">المنتجات والمخزون</div>
+        <div class="std-add-btn" onclick="loadLiveProducts()">🔄</div>
+      </div>
+      <div class="search-wrap">
+        <div class="search-box">🔍<input type="text" id="prodSearchInput" placeholder="بحث بالاسم أو الباركود..." oninput="filterProductsList(this.value)"></div>
+      </div>
+    </div>
+
+    <div class="list-body" id="productsListContainer">
+      <div style="text-align:center;padding:20px;font-size:12px;color:#999;">جاري تحميل المنتجات من Supabase...</div>
+    </div>
+  </div>
+
+  <!-- ============ 5. CUSTOMER STATEMENT ============ -->
+  <div class="screen" id="statement">
+    <div class="cust-header">
+      <div class="sale-header-top">
+        <div class="back-btn" onclick="showScreen('sale')">→</div>
+        <div class="sale-title">كشف حساب العميل</div>
+        <div style="width:32px"></div>
+      </div>
+      <div class="cust-id-row">
+        <div class="cust-avatar-lg" id="stmtAvatar">ع</div>
+        <div>
+          <div class="cust-name-lg" id="stmtName">--</div>
+          <div class="cust-phone-lg tabular" id="stmtPhone">--</div>
+          <div class="cust-type-badge" id="stmtType">عميل</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="balance-strip">
+      <div class="balance-cell">
+        <div class="bl">الرصيد المدين الحالي</div>
+        <div class="bv debt tabular" id="stmtCurrentDebt">0 ₪</div>
+      </div>
+      <div class="balance-cell">
+        <div class="bl">سقف الدين المسموح</div>
+        <div class="bv limit tabular" id="stmtCreditLimit">0 ₪</div>
+      </div>
+    </div>
+
+    <div class="section-label"><div class="dash"></div><h2>سجل الحركات المالية</h2></div>
+    <div class="ledger-list" id="stmtLedgerList">
+      <div style="text-align:center;padding:20px;font-size:12px;color:#999;">اختر عميلاً لعرض حركاته...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ========================================================
+   تهيئة الاتصال بـ Supabase
+   ======================================================== */
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// الفرع الافتراضي الحالي (فرع الوسط)
+const CURRENT_BRANCH_ID = 'b1111111-1111-1111-1111-111111111111';
+
+/* حالة التطبيق والسلة */
+let allProducts = [];
+let cart = [];
+let currentPriceMode = 'retail';
+let currentPaymentType = 'full';
+let currentPaymentMethod = 'cash';
+let activeMatchedCustomer = null;
+let lastCreatedInvoice = null;
+
+/* التبديل بين الشاشات */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(id);
+  if(target) target.classList.add('active');
+  window.scrollTo(0, 0);
+
+  const navMap = { dash: 0, sale: 1, products: 2 };
+  document.querySelectorAll('.nav-item').forEach((el, i) => {
+    el.classList.toggle('active', navMap[id] === i);
+  });
+
+  if(id === 'dash') loadDashboardData();
+  if(id === 'products') loadLiveProducts();
+}
+
+/* ========================================================
+   تحميل المنتجات وإدارتها
+   ======================================================== */
+async function loadLiveProducts(){
+  const container = document.getElementById('productsListContainer');
+  try{
+    const { data, error } = await supabaseClient
+      .from('products')
+      .select(`
+        id, name, barcode, unit, retail_price, wholesale_price, min_stock,
+        branch_inventory(branch_id, stock_quantity)
+      `);
+
+    if(error) throw error;
+
+    allProducts = (data || []).map(p => {
+      const bInv = (p.branch_inventory || []).find(bi => bi.branch_id === CURRENT_BRANCH_ID);
+      return {
+        ...p,
+        stock: bInv ? parseFloat(bInv.stock_quantity) : 0
+      };
+    });
+
+    renderProductsList(allProducts);
+  }catch(err){
+    console.error('Error fetching products:', err);
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:red;font-size:12px;">تعذر جلب المنتجات: ${err.message}</div>`;
+  }
+}
+
+function renderProductsList(list){
+  const container = document.getElementById('productsListContainer');
+  if(!list.length){
+    container.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">لا توجد أصناف مطابقة</div>`;
+    return;
+  }
+  container.innerHTML = list.map(p => `
+    <div class="prow" onclick="quickAddToCart('${p.barcode}')">
+      <div class="prow-thumb">📦</div>
+      <div class="prow-info">
+        <div class="prow-name">${p.name}</div>
+        <div class="prow-meta">
+          <span>باركود: ${p.barcode}</span>
+          <span>مفرق: ${p.retail_price} ₪ · جملة: ${p.wholesale_price} ₪</span>
+        </div>
+      </div>
+      <div class="prow-right">
+        <div class="prow-price tabular">${p.stock} ${p.unit || ''}</div>
+        <div class="stock-pill ${p.stock <= p.min_stock ? 'low' : 'ok'}">
+          ${p.stock <= p.min_stock ? 'ناقص' : 'متوفر'}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterProductsList(val){
+  const q = val.trim().toLowerCase();
+  const filtered = allProducts.filter(p => p.name.toLowerCase().includes(q) || p.barcode.includes(q));
+  renderProductsList(filtered);
+}
+
+function quickAddToCart(barcode){
+  addProductByBarcode(barcode);
+  showScreen('sale');
+}
+
+/* ========================================================
+   التحقق من العميل وسجل ديونه
+   ======================================================== */
+async function checkPhoneLive(phone){
+  const clean = document.getElementById('matchClean');
+  const debt = document.getElementById('matchDebt');
+  const badge = document.getElementById('newBadge');
+  clean.classList.remove('show');
+  debt.classList.remove('show');
+  badge.classList.remove('show');
+  activeMatchedCustomer = null;
+
+  const cleanPhone = phone.trim();
+  if(cleanPhone.length < 9) return;
+
+  try{
+    const { data: cust, error } = await supabaseClient
+      .from('customers')
+      .select('*')
+      .eq('phone', cleanPhone)
+      .maybeSingle();
+
+    if(error) throw error;
+
+    if(cust){
+      activeMatchedCustomer = cust;
+      document.getElementById('customerNameInput').value = cust.name;
+      const curDebt = parseFloat(cust.current_debt || 0);
+
+      if(curDebt > 0){
+        document.getElementById('debtName').innerText = cust.name;
+        document.getElementById('debtBalanceValue').innerText = `${curDebt} ₪ دين`;
+        debt.classList.add('show');
+      } else {
+        document.getElementById('cleanName').innerText = cust.name;
+        clean.classList.add('show');
+      }
+    } else {
+      badge.classList.add('show');
+    }
+  }catch(err){
+    console.error('Error fetching customer:', err);
+  }
+}
+
+async function openCustomerStatement(){
+  if(!activeMatchedCustomer) return;
+  document.getElementById('stmtName').innerText = activeMatchedCustomer.name;
+  document.getElementById('stmtPhone').innerText = activeMatchedCustomer.phone;
+  document.getElementById('stmtType').innerText = activeMatchedCustomer.type === 'wholesale' ? 'عميل جملة' : 'عميل مفرق';
+  document.getElementById('stmtCurrentDebt').innerText = `${activeMatchedCustomer.current_debt || 0} ₪`;
+  document.getElementById('stmtCreditLimit').innerText = `${activeMatchedCustomer.credit_limit || 0} ₪`;
+
+  const ledgerList = document.getElementById('stmtLedgerList');
+  ledgerList.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">جاري جلب الحركات...</div>`;
+  showScreen('statement');
+
+  const { data: logs } = await supabaseClient
+    .from('customer_ledger')
+    .select('*')
+    .eq('customer_id', activeMatchedCustomer.id)
+    .order('created_at', { ascending: false });
+
+  if(!logs || !logs.length){
+    ledgerList.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">لا توجد حركات مسجلة لهذا العميل.</div>`;
+    return;
+  }
+
+  ledgerList.innerHTML = logs.map(l => `
+    <div class="ledger-item">
+      <div class="ledger-icon ${l.movement_type === 'payment' ? 'pay' : ''}">
+        ${l.movement_type === 'payment' ? '💵' : '🧾'}
+      </div>
+      <div class="ledger-info">
+        <div class="ledger-title">${l.notes || (l.movement_type === 'payment' ? 'دفعة تسديد' : 'فاتورة بيع آجل')}</div>
+        <div class="ledger-meta">${new Date(l.created_at).toLocaleString('ar-EG')}</div>
+      </div>
+      <div class="ledger-right">
+        <div class="ledger-amount ${l.movement_type === 'payment' ? 'pay' : 'debt'} tabular">
+          ${l.movement_type === 'payment' ? '− ' : '+ '}${l.amount} ₪
+        </div>
+        <div class="ledger-after tabular">الرصيد: ${l.balance_after} ₪</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ========================================================
+   إدارة السلة وإجراءات الفاتورة
+   ======================================================== */
+function addProductByBarcode(code){
+  const cleanCode = code.trim();
+  const prod = allProducts.find(p => p.barcode === cleanCode || p.name.toLowerCase() === cleanCode.toLowerCase());
+  if(!prod){
+    alert('لم يتم العثور على صنف بالباركود: ' + cleanCode);
+    return;
+  }
+
+  const existing = cart.find(i => i.product_id === prod.id);
+  if(existing){
+    existing.quantity += 1;
+  } else {
+    cart.push({
+      product_id: prod.id,
+      name: prod.name,
+      unit: prod.unit || 'قطعة',
+      retail_price: parseFloat(prod.retail_price),
+      wholesale_price: parseFloat(prod.wholesale_price),
+      quantity: 1
+    });
+  }
+  renderCart();
+}
+
+document.getElementById('barcodeInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if(barcodeInput.value) {
+      addProductByBarcode(barcodeInput.value);
+      barcodeInput.value = '';
+    }
+  }
+});
+
+function changeQty(index, delta){
+  cart[index].quantity += delta;
+  if(cart[index].quantity <= 0){
+    cart.splice(index, 1);
+  }
+  renderCart();
+}
+
+function renderCart(){
+  const cartContainer = document.getElementById('cartItems');
+  const emptyCart = document.getElementById('emptyCart');
+  const countSpan = document.getElementById('cartCount');
+
+  countSpan.innerText = `${cart.length} أصناف`;
+  emptyCart.style.display = cart.length === 0 ? 'block' : 'none';
+  cartContainer.style.display = cart.length === 0 ? 'none' : 'block';
+
+  let grandTotal = 0;
+
+  cartContainer.innerHTML = cart.map((item, index) => {
+    const unitPrice = currentPriceMode === 'wholesale' ? item.wholesale_price : item.retail_price;
+    const total = unitPrice * item.quantity;
+    grandTotal += total;
+    return `
+      <div class="cart-item">
+        <div class="ci-thumb">📦</div>
+        <div class="ci-info">
+          <div class="ci-name">${item.name}</div>
+          <div class="ci-price tabular">${unitPrice} ₪ / ${item.unit}</div>
+        </div>
+        <div class="ci-qty">
+          <button onclick="changeQty(${index}, -1)">−</button>
+          <span class="n">${item.quantity}</span>
+          <button onclick="changeQty(${index}, 1)">+</button>
+        </div>
+        <div class="ci-total tabular">${total} ₪</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('subtotalDisplay').innerText = `${grandTotal} ₪`;
+  document.getElementById('grandTotalDisplay').innerText = `${grandTotal} ₪`;
+  window.currentTotal = grandTotal;
+
+  updatePaymentState();
+}
+
+/* تبديل وضع السعر */
+document.querySelectorAll('#priceToggle button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('#priceToggle button').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentPriceMode = e.currentTarget.dataset.mode;
+    renderCart();
+  });
+});
+
+/* تبديل نوع الدفع */
+document.querySelectorAll('#payTypeToggle button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('#payTypeToggle button').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentPaymentType = e.currentTarget.dataset.type;
+    document.getElementById('partialBlock').classList.toggle('show', currentPaymentType === 'partial');
+    updatePaymentState();
+  });
+});
+document.getElementById('paidNowInput').addEventListener('input', updatePaymentState);
+
+/* تبديل طريقة الدفع */
+document.querySelectorAll('#payMethods .pm-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('#payMethods .pm-btn').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentPaymentMethod = e.currentTarget.dataset.method;
+    document.getElementById('walletBlock').classList.toggle('show', currentPaymentMethod === 'wallet');
+    updatePaymentState();
+  });
+});
+document.getElementById('walletRefInput').addEventListener('input', updatePaymentState);
+
+function updatePaymentState(){
+  const total = window.currentTotal || 0;
+  const paidNowInput = document.getElementById('paidNowInput');
+  const remainderValue = document.getElementById('remainderValue');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const walletRefInput = document.getElementById('walletRefInput');
+
+  let paidNow = total;
+  let remainder = 0;
+
+  if(currentPaymentType === 'partial'){
+    paidNow = parseFloat(paidNowInput.value) || 0;
+    if(paidNow > total) paidNow = total;
+    remainder = Math.max(total - paidNow, 0);
+    remainderValue.innerText = `${remainder} ₪`;
+  }
+
+  let isValid = cart.length > 0;
+  let btnText = `✔ إتمام البيع — ${total} ₪`;
+
+  if(currentPaymentType === 'partial'){
+    if(paidNow <= 0 && remainder > 0){
+      btnText = `✔ تسجيل كدين كامل — ${remainder} ₪`;
+    } else {
+      btnText = `✔ دفع ${paidNow} ₪ — وباقي ${remainder} ₪ دين`;
+    }
+    const phone = document.getElementById('customerPhoneInput').value.trim();
+    if(!phone) isValid = false; // الدين يتطلب رقم هاتف
+  }
+
+  if(currentPaymentMethod === 'wallet' && !walletRefInput.value.trim()){
+    isValid = false;
+  }
+
+  checkoutBtn.disabled = !isValid;
+  checkoutBtn.innerText = btnText;
+}
+
+/* ========================================================
+   تنفيذ عملية البيع واستدعاء دالة process_sale
+   ======================================================== */
+async function executeSaleProcess(){
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  checkoutBtn.disabled = true;
+  checkoutBtn.innerText = 'جاري تسجيل الفاتورة...';
+
+  const total = window.currentTotal || 0;
+  const custName = document.getElementById('customerNameInput').value.trim() || 'زبون عام';
+  const custPhone = document.getElementById('customerPhoneInput').value.trim() || '0000000000';
+  const paidNow = currentPaymentType === 'partial' ? (parseFloat(document.getElementById('paidNowInput').value) || 0) : total;
+  const walletRef = document.getElementById('walletRefInput').value.trim() || null;
+
+  const payloadItems = cart.map(item => ({
+    product_id: item.product_id,
+    quantity: item.quantity
+  }));
+
+  try{
+    const { data, error } = await supabaseClient.rpc('process_sale', {
+      p_branch_id: CURRENT_BRANCH_ID,
+      p_customer_name: custName,
+      p_customer_phone: custPhone,
+      p_customer_type: currentPriceMode === 'wholesale' ? 'wholesale' : 'retail',
+      p_price_mode: currentPriceMode,
+      p_payment_type: currentPaymentType,
+      p_payment_method: currentPaymentMethod,
+      p_paid_amount: paidNow,
+      p_wallet_ref: walletRef,
+      p_discount: 0,
+      p_items: payloadItems
+    });
+
+    if(error) throw error;
+
+    lastCreatedInvoice = {
+      invoice_number: data.invoice_number,
+      date: new Date().toLocaleString('ar-EG'),
+      customer_name: custName,
+      customer_phone: custPhone,
+      price_mode: currentPriceMode,
+      payment_type: currentPaymentType,
+      items: [...cart],
+      total: data.total,
+      paid: data.paid,
+      remaining: data.remaining
+    };
+
+    renderInvoiceScreen(lastCreatedInvoice);
+    cart = [];
+    renderCart();
+    document.getElementById('customerNameInput').value = '';
+    document.getElementById('customerPhoneInput').value = '';
+    document.getElementById('matchClean').classList.remove('show');
+    document.getElementById('matchDebt').classList.remove('show');
+    document.getElementById('newBadge').classList.remove('show');
+
+    showScreen('invoice');
+  }catch(err){
+    console.error('Sale failed:', err);
+    alert('حدث خطأ أثناء معالجة الفاتورة:\n' + err.message);
+    checkoutBtn.disabled = false;
+    updatePaymentState();
+  }
+}
+
+function renderInvoiceScreen(inv){
+  document.getElementById('invNumDisplay').innerText = `#${inv.invoice_number}`;
+  document.getElementById('invDateDisplay').innerText = inv.date;
+  document.getElementById('invPriceModeDisplay').innerText = inv.price_mode === 'wholesale' ? 'جملة' : 'مفرق';
+  document.getElementById('invCustomerName').innerText = inv.customer_name;
+  document.getElementById('invCustomerPhone').innerText = inv.customer_phone;
+  document.getElementById('invCustomerType').innerText = inv.price_mode === 'wholesale' ? 'عميل جملة' : 'عميل مفرق';
+
+  const badge = document.getElementById('invStatusBadge');
+  badge.innerText = inv.remaining > 0 ? 'دفع جزئي' : 'مدفوع بالكامل';
+  badge.className = `inv-status ${inv.remaining > 0 ? 'partial' : 'paid'}`;
+
+  document.getElementById('invTableBody').innerHTML = inv.items.map(item => {
+    const price = inv.price_mode === 'wholesale' ? item.wholesale_price : item.retail_price;
+    return `
+      <tr>
+        <td><div class="inv-item-name">${item.name}</div><div class="inv-item-sub">${item.unit}</div></td>
+        <td class="num tabular">${item.quantity}</td>
+        <td class="num tabular">${price}</td>
+        <td class="num tabular">${price * item.quantity}</td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('invSubtotal').innerText = `${inv.total} ₪`;
+  document.getElementById('invTotal').innerText = `${inv.total} ₪`;
+  document.getElementById('invPaid').innerText = `${inv.paid} ₪`;
+  document.getElementById('invRemain').innerText = `${inv.remaining} ₪`;
+}
+
+function shareWhatsapp(){
+  if(!lastCreatedInvoice) return;
+  const text = `فاتورة سوق الأمانة %0Aرقم: ${lastCreatedInvoice.invoice_number}%0Aالإجمالي: ${lastCreatedInvoice.total} ₪%0Aالمدفوع: ${lastCreatedInvoice.paid} ₪%0Aالمتبقي: ${lastCreatedInvoice.remaining} ₪%0Aشكراً لتعاملكم معنا!`;
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+}
+
+/* ========================================================
+   تحميل بيانات الواجهة الرئيسية
+   ======================================================== */
+async function loadDashboardData(){
+  try{
+    const today = new Date().toISOString().split('T')[0];
+
+    // الفواتير
+    const { data: invs } = await supabaseClient
+      .from('invoices')
+      .select('id, total, created_at, customer_id, customers(name)')
+      .eq('branch_id', CURRENT_BRANCH_ID)
+      .order('created_at', { ascending: false });
+
+    const totalSales = (invs || []).reduce((acc, cur) => acc + parseFloat(cur.total || 0), 0);
+    document.getElementById('dashTodaySales').innerText = `${totalSales} ₪`;
+    document.getElementById('dashInvoicesCount').innerText = `${invs?.length || 0} فواتير`;
+
+    // قائمة آخر الفواتير
+    const recent = document.getElementById('recentInvoicesList');
+    if(!invs || !invs.length){
+      recent.innerHTML = `<div style="text-align:center;padding:20px;font-size:12px;color:#999;">لا توجد فواتير بعد.</div>`;
+    } else {
+      recent.innerHTML = invs.slice(0, 5).map(iv => `
+        <div class="act-row">
+          <div class="act-left">
+            <div class="act-dot"></div>
+            <div>
+              <div class="act-name">${iv.customers?.name || 'زبون عام'}</div>
+              <div class="act-meta">${new Date(iv.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</div>
+            </div>
+          </div>
+          <div class="act-amount tabular">${iv.total} ₪</div>
+        </div>
+      `).join('');
+    }
+
+    // الصندوق
+    const { data: cash } = await supabaseClient
+      .from('cashbox_logs')
+      .select('amount, is_income')
+      .eq('branch_id', CURRENT_BRANCH_ID);
+
+    let netCash = 0;
+    (cash || []).forEach(c => {
+      netCash += c.is_income ? parseFloat(c.amount) : -parseFloat(c.amount);
+    });
+    document.getElementById('dashCashbox').innerText = `${netCash} ₪`;
+
+    // إجمالي الديون
+    const { data: custs } = await supabaseClient.from('customers').select('current_debt');
+    const totalDebt = (custs || []).reduce((acc, cur) => acc + parseFloat(cur.current_debt || 0), 0);
+    document.getElementById('dashTotalDebt').innerText = `${totalDebt} ₪`;
+
+    // النواقص
+    if(allProducts.length){
+      const lowCount = allProducts.filter(p => p.stock <= p.min_stock).length;
+      document.getElementById('dashLowStock').innerText = lowCount;
+    }
+  }catch(err){
+    console.error('Error loading dashboard metrics:', err);
+  }
+}
+
+// بدء التحميل الأولي عند فتح الصفحة
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadLiveProducts();
+  await loadDashboardData();
+});
+</script>
+
+</body>
+</html>
