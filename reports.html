@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>سوبر ماركت أبو سارة — التقارير والأرباح</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --ink:#1C2B33;
+    --ink-soft:#3C4C54;
+    --paper:#F7F5F0;
+    --card:#FFFFFF;
+    --brass:#B8862E;
+    --brass-deep:#8F6A22;
+    --sage:#4F7A63;
+    --sage-bg:#EAF1EC;
+    --clay:#B23B3B;
+    --clay-bg:#F7E9E7;
+    --blue:#2B6CB0;
+    --blue-bg:#EBF8FF;
+    --line:#E4DED0;
+    --line-soft:#EFEBE0;
+    --sidebar-w: 58px;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Almarai', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,h4,.display{font-family:'Tajawal',sans-serif;}
+  .tabular{font-variant-numeric: tabular-nums;}
+  a{text-decoration:none;color:inherit;}
+
+  .app-container{
+    display:flex;
+    width:100%;
+    max-width:600px;
+    min-height:100vh;
+    background:var(--paper);
+    position:relative;
+    border-inline:1px solid var(--line-soft);
+  }
+
+  /* 1. الشريط الجانبي */
+  .sidebar{
+    width:var(--sidebar-w);
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:10px 0;
+    gap:4px;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    height:100vh;
+    z-index:20;
+  }
+  .sidebar-logo{
+    width:38px;height:38px;background:var(--brass);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Tajawal';font-weight:800;font-size:17px;color:var(--ink);
+    margin-bottom:6px;
+  }
+  .side-link{
+    width:44px;height:44px;border-radius:8px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;color:#9AABB4;gap:2px;transition:0.15s;
+  }
+  .side-link .icon{font-size:16px;}
+  .side-link .lbl{font-size:7.5px;font-weight:700;}
+  .side-link:hover, .side-link.active{background:rgba(255,255,255,0.12);color:#fff;}
+  .side-link.active{background:var(--brass);color:var(--ink);}
+
+  /* 2. منطقة العمل */
+  .main-content{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    padding-bottom:20px;
+  }
+
+  .reports-header{padding:12px 14px;background:var(--ink);color:#fff;border-radius:0 0 14px 14px;}
+  .header-meta{display:flex;align-items:center;justify-content:space-between;}
+  .store-title{font-family:'Tajawal';font-weight:800;font-size:15px;}
+  .z-report-btn{
+    background:var(--brass);color:#fff;border:none;border-radius:8px;padding:6px 10px;
+    font-family:'Tajawal';font-weight:800;font-size:11.5px;display:flex;align-items:center;gap:4px;cursor:pointer;
+  }
+
+  /* فلاتر الفترة الزمنية */
+  .time-filters{padding:10px 10px 0;}
+  .chips-row{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;}
+  .chips-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:1;text-align:center;padding:6px 4px;border-radius:8px;border:1px solid var(--line);background:var(--card);
+    font-size:11px;font-weight:700;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  /* شبكة المؤشرات المالية الرئيسية (KPIs) */
+  .kpi-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 10px 0;
+  }
+  .kpi-card{
+    background:var(--card);border:1px solid var(--line-soft);border-radius:10px;
+    padding:10px 12px;display:flex;flex-direction:column;gap:3px;
+  }
+  .kpi-card.profit{border-right:3.5px solid var(--sage);background:#FAFDFC;}
+  .kpi-card.sales{border-right:3.5px solid var(--brass);}
+  .kpi-card.expenses{border-right:3.5px solid var(--clay);}
+  .kpi-card.debts{border-right:3.5px solid var(--warn);}
+
+  .kpi-title{font-size:10px;font-weight:700;color:var(--ink-soft);}
+  .kpi-val{font-family:'Tajawal';font-weight:800;font-size:15px;color:var(--ink);margin-top:2px;}
+  .kpi-sub{font-size:9px;color:#8A8478;}
+
+  /* بطاقة تفصيل طرق السداد */
+  .breakdown-card{
+    margin:10px 10px 0;padding:10px 12px;background:var(--card);border:1px solid var(--line-soft);
+    border-radius:10px;display:flex;flex-direction:column;gap:8px;
+  }
+  .bc-title{font-size:11.5px;font-weight:800;color:var(--ink);font-family:'Tajawal';display:flex;justify-content:space-between;}
+  .pay-methods-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .pm-box{background:var(--paper);padding:6px;border-radius:6px;text-align:center;}
+  .pm-box .lbl{font-size:9.5px;color:#8A8478;}
+  .pm-box .val{font-family:'Tajawal';font-weight:800;font-size:12px;color:var(--ink);margin-top:2px;}
+
+  /* قائمة الأصناف الأكثر مبيعاً */
+  .section-title{
+    font-size:12px;font-weight:800;color:var(--ink);font-family:'Tajawal';
+    padding:12px 10px 4px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .top-products-list{padding:0 10px;display:flex;flex-direction:column;gap:6px;}
+  .top-item-row{
+    background:var(--card);border:1px solid var(--line-soft);border-radius:8px;
+    padding:8px 10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .ti-name{font-size:12px;font-weight:700;color:var(--ink);}
+  .ti-qty{font-size:10px;color:#8A8478;margin-top:1px;}
+  .ti-profit{text-align:left;}
+  .ti-profit .val{font-family:'Tajawal';font-weight:800;font-size:12.5px;color:var(--sage);}
+  .ti-profit .lbl{font-size:9px;color:#8A8478;}
+
+  /* قالب تقرير اليومية المقفل (Z-Report) */
+  #printableZReport{display:none;}
+  @media print{
+    body * {visibility: hidden;}
+    #printableZReport, #printableZReport * {visibility: visible;}
+    #printableZReport{
+      display: block !important;
+      position: absolute;
+      left: 0; top: 0; width: 78mm;
+      margin: 0; padding: 5mm;
+      font-family: 'Almarai', sans-serif;
+      font-size: 11px; color: #000; background: #fff;
+    }
+    .r-head{text-align:center;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;}
+    .r-title{font-family:'Tajawal';font-weight:800;font-size:14.5px;}
+    .r-meta{font-size:9.5px;line-height:1.4;}
+    .r-section{border-top:1px dashed #000;padding-top:4px;margin-top:5px;}
+    .r-row{display:flex;justify-content:space-between;padding:2px 0;font-size:10.5px;}
+    .r-row.bold{font-weight:800;font-size:12px;}
+    .r-num{text-align:left;font-family:'Tajawal';font-weight:700;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- 1. الشريط الجانبي -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">س</div>
+    <a href="index.html" class="side-link" title="البيع"><span class="icon">🛒</span><span class="lbl">البيع</span></a>
+    <a href="products.html" class="side-link" title="المخزون"><span class="icon">📦</span><span class="lbl">المخزون</span></a>
+    <a href="statement.html" class="side-link" title="العملاء"><span class="icon">👥</span><span class="lbl">العملاء</span></a>
+    <a href="purchases.html" class="side-link" title="المشتريات"><span class="icon">🧾</span><span class="lbl">المشتريات</span></a>
+    <a href="transfer.html" class="side-link" title="التحويل"><span class="icon">🏬</span><span class="lbl">التحويل</span></a>
+    <a href="cashbox.html" class="side-link" title="الصندوق"><span class="icon">💰</span><span class="lbl">الصندوق</span></a>
+    <a href="reports.html" class="side-link active" title="التقارير"><span class="icon">📊</span><span class="lbl">التقارير</span></a>
+    <a href="settings.html" class="side-link" title="الإعدادات"><span class="icon">⚙️</span><span class="lbl">الإعدادات</span></a>
+  </aside>
+
+  <!-- 2. مساحة العمل -->
+  <main class="main-content">
+    
+    <div class="reports-header">
+      <div class="header-meta">
+        <div class="store-title">الأرباح والتقارير المالية</div>
+        <button class="z-report-btn" onclick="printZReport()">🖨️ تقرير اليومية (Z)</button>
+      </div>
+    </div>
+
+    <!-- أزرار الفترات الزمنية -->
+    <div class="time-filters">
+      <div class="chips-row">
+        <div class="chip active" onclick="setTimeFilter('today', this)">اليوم</div>
+        <div class="chip" onclick="setTimeFilter('yesterday', this)">أمس</div>
+        <div class="chip" onclick="setTimeFilter('week', this)">آخر 7 أيام</div>
+        <div class="chip" onclick="setTimeFilter('month', this)">هذا الشهر</div>
+      </div>
+    </div>
+
+    <!-- بطاقات المؤشرات المالية الرئيسية -->
+    <div class="kpi-grid">
+      <div class="kpi-card sales">
+        <div class="kpi-title">إجمالي المبيعات</div>
+        <div class="kpi-val tabular" id="totalSalesVal">0 ل.س</div>
+        <div class="kpi-sub" id="invoicesCount">0 فاتورة مكتملة</div>
+      </div>
+
+      <div class="kpi-card profit">
+        <div class="kpi-title">صافي الأرباح التقديرية</div>
+        <div class="kpi-val tabular" id="netProfitVal" style="color:var(--sage)">0 ل.س</div>
+        <div class="kpi-sub">بعد خصم التكلفة والمصاريف</div>
+      </div>
+
+      <div class="kpi-card expenses">
+        <div class="kpi-title">المصاريف والنثريات</div>
+        <div class="kpi-val tabular" id="totalExpensesVal" style="color:var(--clay)">0 ل.س</div>
+        <div class="kpi-sub">المسجلة في الصندوق</div>
+      </div>
+
+      <div class="kpi-card debts">
+        <div class="kpi-title">المبيعات الآجلة (ديون)</div>
+        <div class="kpi-val tabular" id="creditSalesVal" style="color:var(--brass-deep)">0 ل.س</div>
+        <div class="kpi-sub">ذمم مستحقة على العملاء</div>
+      </div>
+    </div>
+
+    <!-- تفصيل قنوات التحصيل والدفع -->
+    <div class="breakdown-card">
+      <div class="bc-title">
+        <span>توزيع المقبوضات حسب وسيلة الدفع</span>
+        <span id="collectedTotal" class="tabular" style="color:var(--sage)">0 ل.س</span>
+      </div>
+      <div class="pay-methods-grid">
+        <div class="pm-box">
+          <div class="lbl">💵 نقداً</div>
+          <div class="val tabular" id="cashPayVal">0 ل.س</div>
+        </div>
+        <div class="pm-box">
+          <div class="lbl">📱 سيريتل / MTN</div>
+          <div class="val tabular" id="walletPayVal">0 ل.س</div>
+        </div>
+        <div class="pm-box">
+          <div class="lbl">💳 بطاقة</div>
+          <div class="val tabular" id="cardPayVal">0 ل.س</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- الأصناف الأكثر مبيعاً وتحقيقاً للأرباح -->
+    <div class="section-title">
+      <span>الأصناف الأكثر طلباً وربحية</span>
+      <span style="font-size:10px;color:#8A8478;">الترتيب حسب الكمية</span>
+    </div>
+    <div class="top-products-list" id="topProductsContainer">
+      <div style="text-align:center;padding:20px;color:#888;">⏳ جاري تحليل بيانات المبيعات...</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- قسيمة تقرير إغلاق اليومية الحراري (Z-Report) -->
+<div id="printableZReport">
+  <div class="r-head">
+    <div class="r-title">سوبر ماركت أبو سارة</div>
+    <div class="r-meta">تقرير إغلاق اليومية المالي (Z-Report)</div>
+    <div class="r-meta" id="zRepBranch">الفرع الرئيسي — دمشق</div>
+    <div class="r-meta" id="zRepDate"></div>
+  </div>
+
+  <div class="r-section">
+    <div class="r-row bold"><span>إجمالي المبيعات:</span><span class="r-num tabular" id="zSales"></span></div>
+    <div class="r-row"><span>عدد الفواتير:</span><span class="r-num tabular" id="zCount"></span></div>
+    <div class="r-row"><span>تكلفة البضاعة المباعة:</span><span class="r-num tabular" id="zCost"></span></div>
+    <div class="r-row"><span>إجمالي المصاريف:</span><span class="r-num tabular" id="zExp"></span></div>
+    <div class="r-row bold" style="border-top:1px solid #000;margin-top:3px;padding-top:3px;">
+      <span>صافي الأرباح:</span><span class="r-num tabular" id="zProfit"></span>
+    </div>
+  </div>
+
+  <div class="r-section">
+    <div style="font-weight:700;margin-bottom:3px;">المقبوضات المحصلة فعلياً:</div>
+    <div class="r-row"><span>نقداً بالصندوق:</span><span class="r-num tabular" id="zCash"></span></div>
+    <div class="r-row"><span>كاش إلكتروني (سيريتل/MTN):</span><span class="r-num tabular" id="zWallet"></span></div>
+    <div class="r-row"><span>بطاقات بنكية:</span><span class="r-num tabular" id="zCard"></span></div>
+    <div class="r-row" style="color:#555;"><span>مبيعات آجلة (ذمم):</span><span class="r-num tabular" id="zCredit"></span></div>
+  </div>
+
+  <div style="text-align:center;margin-top:15px;border-top:1px dashed #000;padding-top:6px;font-size:9px;">
+    تم الإغلاق والترحيل بنجاح ✔
+  </div>
+</div>
+
+<script>
+/* ========================================================
+   1. الاتصال بـ Supabase
+   ======================================================== */
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const MAIN_BRANCH_ID = 'b1111111-1111-1111-1111-111111111111';
+
+let currentFilter = 'today';
+let reportData = {
+  totalSales: 0,
+  invoicesCount: 0,
+  estimatedCost: 0,
+  expenses: 0,
+  creditSales: 0,
+  cashCollected: 0,
+  walletCollected: 0,
+  cardCollected: 0,
+  topItems: []
+};
+
+/* ========================================================
+   2. جلب وتحليل البيانات المالية
+   ======================================================== */
+async function fetchReportsData(){
+  const { start, end } = getDateRange(currentFilter);
+
+  try{
+    // 1. جلب فواتير المبيعات وبنودها
+    const { data: sales, error: sErr } = await db
+      .from('invoices')
+      .select('*, invoice_items(*)')
+      .eq('branch_id', MAIN_BRANCH_ID)
+      .gte('created_at', start)
+      .lte('created_at', end);
+
+    // 2. جلب المصاريف من الصندوق
+    const { data: expenses, error: eErr } = await db
+      .from('cashbox_transactions')
+      .select('*')
+      .eq('branch_id', MAIN_BRANCH_ID)
+      .eq('transaction_type', 'out')
+      .gte('created_at', start)
+      .lte('created_at', end);
+
+    // تجميع الحسابات
+    let totalSales = 0;
+    let totalPaid = 0;
+    let totalCredit = 0;
+    let cashPay = 0, walletPay = 0, cardPay = 0;
+    let estCost = 0;
+    let itemsMap = {};
+
+    (sales || []).forEach(inv => {
+      const gTotal = parseFloat(inv.grand_total || inv.total_amount || 0);
+      const paid = parseFloat(inv.paid_amount || 0);
+      totalSales += gTotal;
+      totalPaid += paid;
+      totalCredit += Math.max(gTotal - paid, 0);
+
+      if(inv.payment_method === 'cash') cashPay += paid;
+      else if(inv.payment_method === 'wallet') walletPay += paid;
+      else if(inv.payment_method === 'card') cardPay += paid;
+
+      (inv.invoice_items || []).forEach(item => {
+        const pName = item.product_name || 'صنف';
+        const q = parseFloat(item.quantity || 1);
+        const price = parseFloat(item.unit_price || 0);
+        const cost = parseFloat(item.cost_price || price * 0.78); // تقدير التكلفة إن لم تكن مسجلة
+        const profit = (price - cost) * q;
+        estCost += (cost * q);
+
+        if(!itemsMap[pName]){
+          itemsMap[pName] = { name: pName, qty: 0, profit: 0 };
+        }
+        itemsMap[pName].qty += q;
+        itemsMap[pName].profit += profit;
+      });
+    });
+
+    let totalExp = 0;
+    (expenses || []).forEach(exp => {
+      totalExp += parseFloat(exp.amount || 0);
+    });
+
+    const topItems = Object.values(itemsMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
+
+    reportData = {
+      totalSales,
+      invoicesCount: (sales || []).length,
+      estimatedCost: estCost,
+      expenses: totalExp,
+      creditSales: totalCredit,
+      cashCollected: cashPay,
+      walletCollected: walletPay,
+      cardCollected: cardPay,
+      topItems
+    };
+
+    renderReports();
+  }catch(err){
+    console.error('Reports error:', err);
+    // بيانات عرض افتراضية
+    renderReports();
+  }
+}
+
+function renderReports(){
+  const d = reportData;
+  const netProfit = Math.max(d.totalSales - d.estimatedCost - d.expenses, 0);
+  const totalCollected = d.cashCollected + d.walletCollected + d.cardCollected;
+
+  document.getElementById('totalSalesVal').innerText = `${d.totalSales.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('invoicesCount').innerText = `${d.invoicesCount} فاتورة مكتملة`;
+  document.getElementById('netProfitVal').innerText = `${netProfit.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('totalExpensesVal').innerText = `${d.expenses.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('creditSalesVal').innerText = `${d.creditSales.toLocaleString('ar-EG')} ل.س`;
+
+  document.getElementById('collectedTotal').innerText = `${totalCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('cashPayVal').innerText = `${d.cashCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('walletPayVal').innerText = `${d.walletCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('cardPayVal').innerText = `${d.cardCollected.toLocaleString('ar-EG')} ل.س`;
+
+  const topCont = document.getElementById('topProductsContainer');
+  if(d.topItems.length === 0){
+    topCont.innerHTML = `
+      <div style="text-align:center;padding:20px;background:#fff;border-radius:8px;border:1px dashed var(--line);color:#888;">
+        📦 لا توجد مبيعات مسجلة في هذه الفترة
+      </div>
+    `;
+    return;
+  }
+
+  topCont.innerHTML = d.topItems.map((item, idx) => `
+    <div class="top-item-row">
+      <div>
+        <div class="ti-name">${idx + 1}. ${item.name}</div>
+        <div class="ti-qty tabular">إجمالي المبيعات: ${item.qty} قطعة</div>
+      </div>
+      <div class="ti-profit">
+        <div class="val tabular">+${Math.round(item.profit).toLocaleString('ar-EG')} ل.س</div>
+        <div class="lbl">أرباح تقديرية</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setTimeFilter(period, elem){
+  currentFilter = period;
+  document.querySelectorAll('.time-filters .chip').forEach(c => c.classList.remove('active'));
+  elem.classList.add('active');
+  fetchReportsData();
+}
+
+function getDateRange(filter){
+  const now = new Date();
+  let start = new Date();
+  let end = new Date();
+
+  if(filter === 'today'){
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+  } else if(filter === 'yesterday'){
+    start.setDate(now.getDate() - 1);
+    start.setHours(0,0,0,0);
+    end.setDate(now.getDate() - 1);
+    end.setHours(23,59,59,999);
+  } else if(filter === 'week'){
+    start.setDate(now.getDate() - 7);
+    start.setHours(0,0,0,0);
+  } else if(filter === 'month'){
+    start.setDate(1);
+    start.setHours(0,0,0,0);
+  }
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString()
+  };
+}
+
+/* ========================================================
+   3. طباعة تقرير إغلاق اليومية (Z-Report)
+   ======================================================== */
+function printZReport(){
+  const d = reportData;
+  const netProfit = Math.max(d.totalSales - d.estimatedCost - d.expenses, 0);
+
+  document.getElementById('zRepDate').innerText = `التاريخ: ${new Date().toLocaleDateString('ar-SY')} — ${new Date().toLocaleTimeString('ar-SY', {hour:'2-digit', minute:'2-digit'})}`;
+  document.getElementById('zSales').innerText = `${d.totalSales.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zCount').innerText = `${d.invoicesCount}`;
+  document.getElementById('zCost').innerText = `${d.estimatedCost.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zExp').innerText = `${d.expenses.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zProfit').innerText = `${netProfit.toLocaleString('ar-EG')} ل.س`;
+
+  document.getElementById('zCash').innerText = `${d.cashCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zWallet').innerText = `${d.walletCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zCard').innerText = `${d.cardCollected.toLocaleString('ar-EG')} ل.س`;
+  document.getElementById('zCredit').innerText = `${d.creditSales.toLocaleString('ar-EG')} ل.س`;
+
+  window.print();
+}
+
+/* ========================================================
+   4. بدء التشغيل
+   ======================================================== */
+window.addEventListener('DOMContentLoaded', () => {
+  fetchReportsData();
+});
+</script>
+
+</body>
+</html>
