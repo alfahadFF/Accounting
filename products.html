@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>سوبر ماركت أبو سارة — المنتجات والمخزون</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- Supabase & Html5Qrcode -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+  :root{
+    --ink:#1C2B33;
+    --ink-soft:#3C4C54;
+    --paper:#F7F5F0;
+    --card:#FFFFFF;
+    --brass:#B8862E;
+    --brass-deep:#8F6A22;
+    --sage:#4F7A63;
+    --sage-bg:#EAF1EC;
+    --clay:#B23B3B;
+    --clay-bg:#F7E9E7;
+    --line:#E4DED0;
+    --line-soft:#EFEBE0;
+    --sidebar-w: 58px;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Almarai', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,h4,.display{font-family:'Tajawal',sans-serif;}
+  .tabular{font-variant-numeric: tabular-nums;}
+  a{text-decoration:none;color:inherit;}
+
+  .app-container{
+    display:flex;
+    width:100%;
+    max-width:600px;
+    min-height:100vh;
+    background:var(--paper);
+    position:relative;
+    border-inline:1px solid var(--line-soft);
+  }
+
+  /* 1. الشريط الجانبي */
+  .sidebar{
+    width:var(--sidebar-w);
+    background:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:10px 0;
+    gap:4px;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    height:100vh;
+    z-index:20;
+  }
+  .sidebar-logo{
+    width:38px;height:38px;background:var(--brass);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Tajawal';font-weight:800;font-size:17px;color:var(--ink);
+    margin-bottom:6px;
+  }
+  .side-link{
+    width:44px;height:44px;border-radius:8px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;color:#9AABB4;gap:2px;transition:0.15s;
+  }
+  .side-link .icon{font-size:16px;}
+  .side-link .lbl{font-size:7.5px;font-weight:700;}
+  .side-link:hover, .side-link.active{background:rgba(255,255,255,0.12);color:#fff;}
+  .side-link.active{background:var(--brass);color:var(--ink);}
+
+  /* 2. منطقة العمل */
+  .main-content{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    padding-bottom:20px;
+  }
+
+  .stock-header{padding:12px 14px;background:var(--ink);color:#fff;border-radius:0 0 14px 14px;}
+  .header-meta{display:flex;align-items:center;justify-content:space-between;}
+  .store-title{font-family:'Tajawal';font-weight:800;font-size:15px;}
+  .add-prod-btn{
+    background:var(--brass);color:#fff;border:none;border-radius:8px;padding:6px 10px;
+    font-family:'Tajawal';font-weight:800;font-size:11.5px;display:flex;align-items:center;gap:4px;cursor:pointer;
+  }
+
+  .search-wrap{display:flex;gap:6px;margin-top:10px;}
+  .search-box{
+    flex:1;background:rgba(255,255,255,.12);border-radius:9px;display:flex;align-items:center;gap:6px;padding:8px 10px;
+  }
+  .search-box input{background:transparent;border:none;outline:none;color:#fff;font-family:'Almarai';font-size:12.5px;flex:1;}
+  .search-box input::placeholder{color:#B9C1C4;}
+  .scan-btn{
+    width:36px;height:36px;background:var(--brass);border-radius:9px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;font-size:15px;
+  }
+
+  /* الفلاتر */
+  .filter-section{padding:8px 10px 0;}
+  .chips-row{
+    display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;
+  }
+  .chips-row::-webkit-scrollbar{display:none;}
+  .chip{
+    padding:5px 10px;border-radius:16px;border:1px solid var(--line);background:var(--card);
+    font-size:11px;font-weight:700;color:var(--ink-soft);white-space:nowrap;cursor:pointer;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .chip.alert-chip.active{background:var(--clay);color:#fff;border-color:var(--clay);}
+
+  .stock-stats-bar{
+    display:flex;justify-content:space-between;align-items:center;padding:6px 10px;
+    font-size:11px;color:var(--ink-soft);font-weight:700;
+  }
+
+  /* قائمة الأصناف */
+  .products-list{padding:0 10px;display:flex;flex-direction:column;gap:8px;}
+  .product-card{
+    background:var(--card);border:1px solid var(--line-soft);border-radius:10px;
+    padding:10px 12px;display:flex;flex-direction:column;gap:8px;
+  }
+  .product-card.low-stock{border-right:4px solid var(--clay);}
+  .p-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+  .p-info{flex:1;min-width:0;}
+  .p-name{font-size:13px;font-weight:800;color:var(--ink);font-family:'Tajawal';}
+  .p-sub{font-size:10px;color:#8A8478;margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .p-cat-tag{background:var(--paper);padding:2px 6px;border-radius:4px;border:1px solid var(--line-soft);}
+
+  .p-actions{display:flex;gap:4px;}
+  .p-btn{
+    width:28px;height:28px;border-radius:6px;border:1px solid var(--line);
+    background:var(--paper);display:flex;align-items:center;justify-content:center;
+    font-size:13px;cursor:pointer;color:var(--ink-soft);
+  }
+  .p-btn:hover{background:var(--line-soft);color:var(--ink);}
+
+  .p-prices-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--paper);
+    border-radius:8px;padding:6px 8px;font-size:10.5px;
+  }
+  .price-cell .lbl{color:#9A9384;font-size:9.5px;}
+  .price-cell .val{font-weight:800;color:var(--ink);font-family:'Tajawal';margin-top:1px;}
+
+  .p-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:2px;}
+  .stock-badge{
+    display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;
+  }
+  .stock-badge.ok{background:var(--sage-bg);color:var(--sage);}
+  .stock-badge.low{background:var(--clay-bg);color:var(--clay);}
+  .stock-badge.empty{background:#f0f0f0;color:#888;}
+
+  .unit-breakdown{font-size:10px;color:var(--ink-soft);font-weight:700;}
+
+  /* النوافذ المنبثقة */
+  .modal-overlay{
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);
+    z-index:100;align-items:center;justify-content:center;padding:12px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    width:100%;max-width:380px;background:#fff;border-radius:12px;overflow:hidden;
+    padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.3);position:relative;max-height:92vh;overflow-y:auto;
+  }
+  .modal-close{
+    position:absolute;top:10px;left:10px;background:transparent;border:none;
+    font-size:18px;cursor:pointer;color:#888;
+  }
+  .modal-card h4{margin:0 0 12px;font-family:'Tajawal';font-size:15px;color:var(--ink);}
+
+  .form-group{margin-bottom:9px;}
+  .form-group label{font-size:10.5px;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:3px;}
+  .form-group input, .form-group select{
+    width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:7px;
+    font-family:'Almarai';font-size:12px;outline:none;background:#fff;
+  }
+  .form-group input:focus, .form-group select:focus{border-color:var(--brass);}
+  .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .unit-box{
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:9px;
+  }
+  .unit-box-title{font-size:10.5px;font-weight:800;color:var(--brass-deep);margin-bottom:6px;font-family:'Tajawal';}
+
+  .modal-submit-btn{
+    width:100%;background:var(--sage);color:#fff;border:none;padding:11px;
+    border-radius:8px;font-family:'Tajawal';font-weight:800;font-size:13.5px;cursor:pointer;margin-top:6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- 1. الشريط الجانبي -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">س</div>
+    <a href="index.html" class="side-link" title="البيع"><span class="icon">🛒</span><span class="lbl">البيع</span></a>
+    <a href="products.html" class="side-link active" title="المخزون"><span class="icon">📦</span><span class="lbl">المخزون</span></a>
+    <a href="statement.html" class="side-link" title="العملاء"><span class="icon">👥</span><span class="lbl">العملاء</span></a>
+    <a href="purchases.html" class="side-link" title="المشتريات"><span class="icon">🧾</span><span class="lbl">المشتريات</span></a>
+    <a href="transfer.html" class="side-link" title="التحويل"><span class="icon">🏬</span><span class="lbl">التحويل</span></a>
+    <a href="cashbox.html" class="side-link" title="الصندوق"><span class="icon">💰</span><span class="lbl">الصندوق</span></a>
+    <a href="reports.html" class="side-link" title="التقارير"><span class="icon">📊</span><span class="lbl">التقارير</span></a>
+    <a href="settings.html" class="side-link" title="الإعدادات"><span class="icon">⚙️</span><span class="lbl">الإعدادات</span></a>
+  </aside>
+
+  <!-- 2. مساحة المخزون الرئيسية -->
+  <main class="main-content">
+    
+    <div class="stock-header">
+      <div class="header-meta">
+        <div class="store-title">المخزون والأصناف</div>
+        <button class="add-prod-btn" onclick="openAddModal()">➕ صنف جديد</button>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-box">
+          🔍<input type="text" id="searchInput" placeholder="ابحث بالاسم أو امسح الباركود..." oninput="handleSearch(this.value)">
+        </div>
+        <div class="scan-btn" onclick="startCameraScanner()" title="مسح باركود للجرد">📷</div>
+      </div>
+    </div>
+
+    <!-- فلاتر التصنيفات والنواقص -->
+    <div class="filter-section">
+      <div class="chips-row" id="categoryChips">
+        <div class="chip active" onclick="setCategoryFilter('all', this)">الكل</div>
+        <div class="chip alert-chip" onclick="setCategoryFilter('low_stock', this)">⚠️ النواقص</div>
+        <div class="chip" onclick="setCategoryFilter('مواد تموينية وغذائية', this)">تموينات</div>
+        <div class="chip" onclick="setCategoryFilter('معلبات ومحفوظات', this)">معلبات</div>
+        <div class="chip" onclick="setCategoryFilter('ألبان وأجبان وبيض', this)">ألبان وأجبان</div>
+        <div class="chip" onclick="setCategoryFilter('منظفات وعناية منزلية', this)">منظفات</div>
+        <div class="chip" onclick="setCategoryFilter('عناية شخصية', this)">عناية شخصية</div>
+        <div class="chip" onclick="setCategoryFilter('مشروبات وعصائر', this)">مشروبات</div>
+        <div class="chip" onclick="setCategoryFilter('شيبس، بسكويت وسكاكر', this)">تسالي وسكاكر</div>
+        <div class="chip" onclick="setCategoryFilter('مجمدات', this)">مجمدات</div>
+        <div class="chip" onclick="setCategoryFilter('بهارات ومكسرات وحبوب', this)">بهارات وحبوب</div>
+        <div class="chip" onclick="setCategoryFilter('بلاستيكيات ومستهلكات', this)">بلاستيكيات</div>
+      </div>
+    </div>
+
+    <div class="stock-stats-bar">
+      <span>الأصناف المعروضة: <b id="displayedCount" class="tabular">0</b></span>
+      <span>النواقص: <b id="lowStockCount" class="tabular" style="color:var(--clay)">0</b></span>
+    </div>
+
+    <!-- قائمة عرض المنتجات الحية من قاعدة البيانات -->
+    <div class="products-list" id="productsList">
+      <div style="text-align:center;padding:40px 10px;color:#888;">
+        ⏳ جاري تحميل بيانات المخزون من السيرفر...
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 3. نافذة إضافة / تعديل منتج -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeProductModal()">✕</button>
+    <h4 id="modalTitle">إضافة صنف جديد</h4>
+    
+    <input type="hidden" id="editProductId">
+
+    <div class="form-group">
+      <label>اسم الصنف *</label>
+      <input type="text" id="pName" placeholder="مثال: أرز الشعلان 5 كغ">
+    </div>
+
+    <div class="form-2col">
+      <div class="form-group">
+        <label>الباركود *</label>
+        <input type="text" id="pBarcode" placeholder="1005">
+      </div>
+      <div class="form-group">
+        <label>التصنيف *</label>
+        <select id="pCategory">
+          <option>مواد تموينية وغذائية</option>
+          <option>معلبات ومحفوظات</option>
+          <option>ألبان وأجبان وبيض</option>
+          <option>منظفات وعناية منزلية</option>
+          <option>عناية شخصية</option>
+          <option>مشروبات وعصائر</option>
+          <option>شيبس، بسكويت وسكاكر</option>
+          <option>مجمدات</option>
+          <option>بهارات ومكسرات وحبوب</option>
+          <option>بلاستيكيات ومستهلكات</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- الوحدة الأساسية (الحبة / المفرد) -->
+    <div class="unit-box">
+      <div class="unit-box-title">▪ الوحدة الأساسية (مفرد)</div>
+      <div class="form-group">
+        <label>اسم الوحدة</label>
+        <input type="text" id="u1Name" value="قطعة" placeholder="قطعة / علبة / كيس">
+      </div>
+      <div class="form-2col">
+        <div class="form-group">
+          <label>سعر المفرق (ل.س)</label>
+          <input type="number" id="u1Retail" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>سعر الجملة (ل.س)</label>
+          <input type="number" id="u1Wholesale" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>سعر التكلفة (ل.س)</label>
+        <input type="number" id="u1Cost" placeholder="0">
+      </div>
+    </div>
+
+    <!-- الوحدة الكبرى (طرد / كرتونة) -->
+    <div class="unit-box">
+      <div class="unit-box-title">▪ الوحدة الكبرى (اختياري - طرد / كرتونة)</div>
+      <div class="form-2col">
+        <div class="form-group">
+          <label>اسم العبوة</label>
+          <input type="text" id="u2Name" placeholder="طرد / كرتونة">
+        </div>
+        <div class="form-group">
+          <label>عدد القطع بالداخل</label>
+          <input type="number" id="u2Multiplier" placeholder="مثال: 12">
+        </div>
+      </div>
+      <div class="form-2col">
+        <div class="form-group">
+          <label>سعر مفرق العبوة (ل.س)</label>
+          <input type="number" id="u2Retail" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>سعر جملة العبوة (ل.س)</label>
+          <input type="number" id="u2Wholesale" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-2col">
+      <div class="form-group">
+        <label>الرصيد الافتتاحي (بالقطعة)</label>
+        <input type="number" id="pStock" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>حد تنبيه النواقص</label>
+        <input type="number" id="pMinAlert" value="5" placeholder="5">
+      </div>
+    </div>
+
+    <button class="modal-submit-btn" id="saveProdBtn" onclick="saveProductToSupabase()">حفظ في قاعدة البيانات</button>
+  </div>
+</div>
+
+<!-- 4. نافذة الجرد السريع -->
+<div class="modal-overlay" id="stockAdjustModal">
+  <div class="modal-card" style="max-width:320px;">
+    <button class="modal-close" onclick="closeStockAdjustModal()">✕</button>
+    <h4>جرد وتعديل الرصيد</h4>
+    <p id="adjustPName" style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;"></p>
+    <input type="hidden" id="adjustProdId">
+    <div class="form-group">
+      <label>الرصيد الفعلي الموجود على الرف (بالقطعة)</label>
+      <input type="number" id="adjustNewStock" style="font-size:15px;font-weight:800;" class="tabular">
+    </div>
+    <button class="modal-submit-btn" id="confirmAdjustBtn" onclick="confirmStockAdjustToSupabase()">تثبيت الجرد في السيرفر</button>
+  </div>
+</div>
+
+<!-- 5. نافذة كاميرا الباركود -->
+<div class="modal-overlay" id="scannerModal">
+  <div class="modal-card" style="padding:8px;max-width:340px;">
+    <button class="modal-close" onclick="stopCameraScanner()">✕</button>
+    <div id="reader" style="width:100%;"></div>
+  </div>
+</div>
+
+<script>
+/* ========================================================
+   1. الاتصال بقاعدة البيانات Supabase
+   ======================================================== */
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const MAIN_BRANCH_ID = 'b1111111-1111-1111-1111-111111111111';
+
+let liveProducts = [];
+let currentCategory = 'all';
+let searchQuery = '';
+let html5QrCode = null;
+
+/* ========================================================
+   2. جلب الأصناف الحية من Supabase
+   ======================================================== */
+async function fetchProductsFromSupabase(){
+  try{
+    // جلب المنتجات مع رصيد المستودع للفرع الرئيسي
+    const { data, error } = await db
+      .from('products')
+      .select('*, inventory(quantity, branch_id)')
+      .order('name', { ascending: true });
+
+    if(error) throw error;
+
+    liveProducts = (data || []).map(p => {
+      // استخراج الكمية للفرع الرئيسي
+      const branchInv = (p.inventory || []).find(inv => inv.branch_id === MAIN_BRANCH_ID);
+      const currentStock = branchInv ? parseFloat(branchInv.quantity) : (parseFloat(p.stock_quantity) || 0);
+
+      // استخراج بنود الوحدات
+      const units = p.units || [
+        { name: p.unit_name || 'قطعة', multiplier: 1, retail: p.retail_price || 0, wholesale: p.wholesale_price || 0 }
+      ];
+      if(p.packaging_name && p.packaging_qty > 1 && units.length === 1){
+        units.push({
+          name: p.packaging_name,
+          multiplier: p.packaging_qty,
+          retail: p.packaging_retail_price || (p.retail_price * p.packaging_qty),
+          wholesale: p.packaging_wholesale_price || (p.wholesale_price * p.packaging_qty)
+        });
+      }
+
+      return {
+        id: p.id,
+        barcode: p.barcode,
+        name: p.name,
+        category: p.category || 'مواد تموينية وغذائية',
+        stock: currentStock,
+        minAlert: parseFloat(p.min_alert_qty || 5),
+        cost: parseFloat(p.cost_price || 0),
+        units: units
+      };
+    });
+
+    renderProducts();
+  }catch(err){
+    console.error('Error fetching products:', err);
+    document.getElementById('productsList').innerHTML = `
+      <div style="text-align:center;padding:30px 10px;color:var(--clay);">
+        ❌ تعذر جلب البيانات من السيرفر: ${err.message}
+      </div>
+    `;
+  }
+}
+
+/* ========================================================
+   3. تصفية وعرض الأصناف
+   ======================================================== */
+function renderProducts(){
+  const container = document.getElementById('productsList');
+  const dispCount = document.getElementById('displayedCount');
+  const lowCountEl = document.getElementById('lowStockCount');
+
+  let list = [...liveProducts];
+  
+  const totalLow = list.filter(p => p.stock <= p.minAlert).length;
+  lowCountEl.innerText = totalLow;
+
+  if(currentCategory === 'low_stock'){
+    list = list.filter(p => p.stock <= p.minAlert);
+  } else if(currentCategory !== 'all'){
+    list = list.filter(p => p.category === currentCategory);
+  }
+
+  if(searchQuery){
+    const q = searchQuery.toLowerCase().trim();
+    list = list.filter(p => (p.barcode && p.barcode.includes(q)) || p.name.toLowerCase().includes(q));
+  }
+
+  dispCount.innerText = list.length;
+
+  if(list.length === 0){
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px 10px;background:#fff;border-radius:10px;border:1px dashed var(--line);color:#888;">
+        📦 لا توجد أصناف مطابقة للبحث أو التصنيف
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(p => {
+    const isLow = p.stock <= p.minAlert;
+    const u1 = p.units[0] || { name: 'قطعة', retail: 0, wholesale: 0 };
+    const u2 = p.units[1] || null;
+
+    let stockClass = 'ok';
+    let stockText = `متوفر (${p.stock} ${u1.name})`;
+    if(p.stock <= 0){
+      stockClass = 'empty';
+      stockText = 'نفذ من المخزون';
+    } else if(isLow){
+      stockClass = 'low';
+      stockText = `ناقص (${p.stock} ${u1.name} متبقي)`;
+    }
+
+    return `
+      <div class="product-card ${isLow ? 'low-stock' : ''}">
+        <div class="p-top">
+          <div class="p-info">
+            <div class="p-name">${p.name}</div>
+            <div class="p-sub">
+              <span>باركود: <b class="tabular">${p.barcode}</b></span>
+              <span class="p-cat-tag">${p.category}</span>
+            </div>
+          </div>
+          <div class="p-actions">
+            <button class="p-btn" onclick="openStockAdjustModal('${p.id}')" title="جرد وتعديل رصيد">📦</button>
+            <button class="p-btn" onclick="openEditModal('${p.id}')" title="تعديل">✎</button>
+          </div>
+        </div>
+
+        <div class="p-prices-grid">
+          <div class="price-cell">
+            <div class="lbl">مفرق (${u1.name}):</div>
+            <div class="val tabular">${u1.retail.toLocaleString('ar-EG')} ل.س</div>
+          </div>
+          <div class="price-cell">
+            <div class="lbl">جملة (${u1.name}):</div>
+            <div class="val tabular">${u1.wholesale.toLocaleString('ar-EG')} ل.س</div>
+          </div>
+          ${u2 ? `
+            <div class="price-cell">
+              <div class="lbl">${u2.name} (مفرق):</div>
+              <div class="val tabular">${u2.retail.toLocaleString('ar-EG')} ل.س</div>
+            </div>
+            <div class="price-cell">
+              <div class="lbl">${u2.name} (جملة):</div>
+              <div class="val tabular">${u2.wholesale.toLocaleString('ar-EG')} ل.س</div>
+            </div>
+          ` : `
+            <div class="price-cell" style="grid-column: span 2;">
+              <div class="lbl">سعر التكلفة:</div>
+              <div class="val tabular">${(p.cost || 0).toLocaleString('ar-EG')} ل.س</div>
+            </div>
+          `}
+        </div>
+
+        <div class="p-bottom">
+          <div class="stock-badge ${stockClass}">
+            <span>${isLow ? '⚠️' : '✓'}</span>
+            <span>${stockText}</span>
+          </div>
+          <div class="unit-breakdown">
+            ${u2 ? `العبوة: ${u2.multiplier} ${u1.name}` : `الحد الأدنى: ${p.minAlert}`}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleSearch(val){
+  searchQuery = val;
+  renderProducts();
+}
+
+function setCategoryFilter(cat, elem){
+  currentCategory = cat;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  elem.classList.add('active');
+  renderProducts();
+}
+
+/* ========================================================
+   4. الإضافة والتعديل في Supabase
+   ======================================================== */
+function openAddModal(){
+  document.getElementById('modalTitle').innerText = 'إضافة صنف جديد';
+  document.getElementById('editProductId').value = '';
+  document.getElementById('pName').value = '';
+  document.getElementById('pBarcode').value = '';
+  document.getElementById('pBarcode').disabled = false;
+  document.getElementById('pCategory').selectedIndex = 0;
+  
+  document.getElementById('u1Name').value = 'قطعة';
+  document.getElementById('u1Retail').value = '';
+  document.getElementById('u1Wholesale').value = '';
+  document.getElementById('u1Cost').value = '';
+
+  document.getElementById('u2Name').value = '';
+  document.getElementById('u2Multiplier').value = '';
+  document.getElementById('u2Retail').value = '';
+  document.getElementById('u2Wholesale').value = '';
+
+  document.getElementById('pStock').value = '';
+  document.getElementById('pMinAlert').value = '5';
+
+  document.getElementById('productModal').classList.add('show');
+}
+
+function openEditModal(prodId){
+  const p = liveProducts.find(item => item.id === prodId);
+  if(!p) return;
+
+  document.getElementById('modalTitle').innerText = 'تعديل بيانات الصنف';
+  document.getElementById('editProductId').value = p.id;
+  document.getElementById('pName').value = p.name;
+  document.getElementById('pBarcode').value = p.barcode;
+  document.getElementById('pBarcode').disabled = false;
+  document.getElementById('pCategory').value = p.category;
+
+  const u1 = p.units[0] || {};
+  document.getElementById('u1Name').value = u1.name || 'قطعة';
+  document.getElementById('u1Retail').value = u1.retail || 0;
+  document.getElementById('u1Wholesale').value = u1.wholesale || 0;
+  document.getElementById('u1Cost').value = p.cost || 0;
+
+  const u2 = p.units[1] || null;
+  if(u2){
+    document.getElementById('u2Name').value = u2.name;
+    document.getElementById('u2Multiplier').value = u2.multiplier;
+    document.getElementById('u2Retail').value = u2.retail;
+    document.getElementById('u2Wholesale').value = u2.wholesale;
+  } else {
+    document.getElementById('u2Name').value = '';
+    document.getElementById('u2Multiplier').value = '';
+    document.getElementById('u2Retail').value = '';
+    document.getElementById('u2Wholesale').value = '';
+  }
+
+  document.getElementById('pStock').value = p.stock;
+  document.getElementById('pMinAlert').value = p.minAlert;
+
+  document.getElementById('productModal').classList.add('show');
+}
+
+function closeProductModal(){
+  document.getElementById('productModal').classList.remove('show');
+}
+
+async function saveProductToSupabase(){
+  const prodId = document.getElementById('editProductId').value;
+  const barcode = document.getElementById('pBarcode').value.trim();
+  const name = document.getElementById('pName').value.trim();
+  const category = document.getElementById('pCategory').value;
+
+  if(!barcode || !name){
+    alert('يرجى إدخال اسم الصنف والباركود');
+    return;
+  }
+
+  const btn = document.getElementById('saveProdBtn');
+  btn.disabled = true;
+  btn.innerText = 'جاري الحفظ في السيرفر...';
+
+  const u1Name = document.getElementById('u1Name').value.trim() || 'قطعة';
+  const u1Retail = parseFloat(document.getElementById('u1Retail').value) || 0;
+  const u1Wholesale = parseFloat(document.getElementById('u1Wholesale').value) || 0;
+  const u1Cost = parseFloat(document.getElementById('u1Cost').value) || 0;
+
+  const units = [
+    { name: u1Name, multiplier: 1, retail: u1Retail, wholesale: u1Wholesale }
+  ];
+
+  const u2Name = document.getElementById('u2Name').value.trim();
+  const u2Mult = parseFloat(document.getElementById('u2Multiplier').value) || 0;
+  let packagingName = null, packagingQty = 1, packagingRetail = 0, packagingWholesale = 0;
+
+  if(u2Name && u2Mult > 1){
+    packagingName = u2Name;
+    packagingQty = u2Mult;
+    packagingRetail = parseFloat(document.getElementById('u2Retail').value) || (u1Retail * u2Mult);
+    packagingWholesale = parseFloat(document.getElementById('u2Wholesale').value) || (u1Wholesale * u2Mult);
+    units.push({
+      name: packagingName,
+      multiplier: packagingQty,
+      retail: packagingRetail,
+      wholesale: packagingWholesale
+    });
+  }
+
+  const stock = parseFloat(document.getElementById('pStock').value) || 0;
+  const minAlert = parseFloat(document.getElementById('pMinAlert').value) || 5;
+
+  const productPayload = {
+    barcode: barcode,
+    name: name,
+    category: category,
+    unit_name: u1Name,
+    retail_price: u1Retail,
+    wholesale_price: u1Wholesale,
+    cost_price: u1Cost,
+    packaging_name: packagingName,
+    packaging_qty: packagingQty,
+    packaging_retail_price: packagingRetail,
+    packaging_wholesale_price: packagingWholesale,
+    min_alert_qty: minAlert,
+    units: units
+  };
+
+  try{
+    let targetId = prodId;
+
+    if(prodId){
+      // تحديث صنف موجود
+      const { error } = await db.from('products').update(productPayload).eq('id', prodId);
+      if(error) throw error;
+    } else {
+      // إدراج صنف جديد
+      const { data, error } = await db.from('products').insert([productPayload]).select().single();
+      if(error) throw error;
+      targetId = data.id;
+    }
+
+    // تحديث رصيد المخزون في جدول inventory
+    if(targetId){
+      await db.from('inventory').upsert({
+        product_id: targetId,
+        branch_id: MAIN_BRANCH_ID,
+        quantity: stock,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'product_id,branch_id' });
+    }
+
+    closeProductModal();
+    await fetchProductsFromSupabase();
+  }catch(err){
+    console.error('Error saving product:', err);
+    alert('حدث خطأ أثناء الحفظ: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'حفظ في قاعدة البيانات';
+  }
+}
+
+/* ========================================================
+   5. الجرد وتعديل الرصيد في Supabase
+   ======================================================== */
+function openStockAdjustModal(prodId){
+  const p = liveProducts.find(item => item.id === prodId);
+  if(!p) return;
+  document.getElementById('adjustProdId').value = p.id;
+  document.getElementById('adjustPName').innerText = `${p.name} (الرصيد المسجل: ${p.stock})`;
+  document.getElementById('adjustNewStock').value = p.stock;
+  document.getElementById('stockAdjustModal').classList.add('show');
+  setTimeout(() => document.getElementById('adjustNewStock').focus(), 150);
+}
+
+function closeStockAdjustModal(){
+  document.getElementById('stockAdjustModal').classList.remove('show');
+}
+
+async function confirmStockAdjustToSupabase(){
+  const prodId = document.getElementById('adjustProdId').value;
+  const newStock = parseFloat(document.getElementById('adjustNewStock').value);
+
+  if(isNaN(newStock) || newStock < 0){
+    alert('يرجى إدخال كمية صحيحة');
+    return;
+  }
+
+  const btn = document.getElementById('confirmAdjustBtn');
+  btn.disabled = true;
+  btn.innerText = 'جاري التحديث...';
+
+  try{
+    const { error } = await db.from('inventory').upsert({
+      product_id: prodId,
+      branch_id: MAIN_BRANCH_ID,
+      quantity: newStock,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'product_id,branch_id' });
+
+    if(error) throw error;
+
+    closeStockAdjustModal();
+    await fetchProductsFromSupabase();
+  }catch(err){
+    console.error('Error adjusting stock:', err);
+    alert('فشل تحديث الجرد: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'تثبيت الجرد في السيرفر';
+  }
+}
+
+/* ========================================================
+   6. مسح الكاميرا للجرد
+   ======================================================== */
+function startCameraScanner(){
+  document.getElementById('scannerModal').classList.add('show');
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 230, height: 150 } },
+    (decodedText) => {
+      stopCameraScanner();
+      document.getElementById('searchInput').value = decodedText;
+      handleSearch(decodedText);
+    },
+    () => {}
+  ).catch(err => {
+    alert("تعذر تشغيل الكاميرا: " + err);
+    stopCameraScanner();
+  });
+}
+
+function stopCameraScanner(){
+  if(html5QrCode){
+    html5QrCode.stop().then(() => {
+      html5QrCode.clear();
+      document.getElementById('scannerModal').classList.remove('show');
+    }).catch(() => {
+      document.getElementById('scannerModal').classList.remove('show');
+    });
+  } else {
+    document.getElementById('scannerModal').classList.remove('show');
+  }
+}
+
+/* ========================================================
+   7. التشغيل المباشر
+   ======================================================== */
+window.addEventListener('DOMContentLoaded', () => {
+  fetchProductsFromSupabase();
+});
+</script>
+
+</body>
+</html>
