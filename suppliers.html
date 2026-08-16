@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة الموردين</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1C2B33; --brass:#B8862E; --sage:#4F7A63; --line:#E4DED0; --clay:#B23B3B;}
+  body{background:#F7F5F0; font-family:'Almarai', sans-serif; display:flex; justify-content:center;}
+  .app{width:100%; max-width:600px; padding:15px;}
+  .card{background:#fff; padding:15px; border-radius:10px; border:1px solid var(--line); margin-bottom:10px;}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+  label{font-size:10px; font-weight:700; color:#555; display:block;}
+  input{width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:12px;}
+  .submit-btn{width:100%; background:var(--sage); color:#fff; border:none; padding:10px; border-radius:6px; cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <h2>إدارة الموردين والشركات</h2>
+    <button onclick="document.getElementById('m').style.display='flex'" style="background:var(--brass); color:#fff; border:none; padding:8px 12px; border-radius:6px;">➕ مورد جديد</button>
+  </div>
+
+  <div id="list">جاري التحميل...</div>
+</div>
+
+<!-- المودال المحدث -->
+<div class="modal-overlay" id="m" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+  <div style="width:90%; max-width:400px; background:#fff; padding:20px; border-radius:12px;">
+    <h3>إضافة مورد / شركة</h3>
+    <div style="margin:10px 0;"><label>اسم الشركة/المنشأة</label><input type="text" id="cName"></div>
+    <div class="form-row">
+        <div><label>اسم المسؤول (المندوب)</label><input type="text" id="cContact"></div>
+        <div><label>رقم الهاتف</label><input type="text" id="cPhone"></div>
+    </div>
+    <div class="form-row">
+        <div><label>العنوان</label><input type="text" id="cAddress"></div>
+        <div><label>الرصيد الافتتاحي (دين للشركة)</label><input type="number" id="cDebt" value="0"></div>
+    </div>
+    <button class="submit-btn" onclick="save()">حفظ المورد</button>
+    <button onclick="document.getElementById('m').style.display='none'" style="width:100%; margin-top:5px; padding:8px; border:none; background:transparent;">إلغاء</button>
+  </div>
+</div>
+
+<script>
+const db = window.supabase.createClient('https://gadcgzgxwwvmowqktyfu.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g');
+
+async function fetchList(){
+  const { data } = await db.from('suppliers').select('*');
+  document.getElementById('list').innerHTML = (data || []).map(s => `
+    <div class="card">
+        <div style="font-weight:800; font-size:14px;">${s.company_name}</div>
+        <div style="font-size:11px; color:#666;">المسؤول: ${s.contact_name || 'غير محدد'} | الهاتف: ${s.phone}</div>
+        <div style="margin-top:8px; color:var(--clay); font-weight:700;">الذمة المالية: ${parseFloat(s.debt).toLocaleString()} ل.س</div>
+    </div>
+  `).join('');
+}
+
+async function save(){
+  const data = {
+    company_name: document.getElementById('cName').value,
+    contact_name: document.getElementById('cContact').value,
+    phone: document.getElementById('cPhone').value,
+    address: document.getElementById('cAddress').value,
+    debt: parseFloat(document.getElementById('cDebt').value)
+  };
+  await db.from('suppliers').insert([data]);
+  document.getElementById('m').style.display = 'none';
+  fetchList();
+}
+
+window.onload = fetchList;
+</script>
+</body>
+</html>
