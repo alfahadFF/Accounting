@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سوبر ماركت أبو سارة — الإعدادات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --ink:#1C2B33; --ink-soft:#3C4C54; --paper:#F7F5F0; --card:#FFFFFF;
+    --brass:#B8862E; --sage:#4F7A63; --line:#E4DED0;
+  }
+  body{background:var(--paper); color:var(--ink); font-family:'Almarai', sans-serif; display:flex; justify-content:center;}
+  .app-container{display:flex; width:100%; max-width:600px; min-height:100vh; background:var(--paper); border-inline:1px solid var(--line);}
+  .sidebar{width:58px; background:var(--ink); display:flex; flex-direction:column; align-items:center; padding:10px 0; gap:4px;}
+  .sidebar-logo{width:38px;height:38px;background:var(--brass);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Tajawal';font-weight:800;font-size:17px;color:var(--ink);margin-bottom:6px;}
+  .side-link{width:44px;height:44px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9AABB4;gap:2px;}
+  .side-link.active{background:var(--brass);color:var(--ink);}
+  
+  .main-content{flex:1; padding:15px;}
+  h2{font-family:'Tajawal'; margin-bottom:15px;}
+  .card{background:var(--card); padding:15px; border-radius:10px; border:1px solid var(--line); margin-bottom:15px;}
+  .card h3{font-size:13px; font-family:'Tajawal'; margin-bottom:10px; color:var(--brass);}
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:block; font-size:10.5px; font-weight:700; color:var(--ink-soft); margin-bottom:3px;}
+  .form-group input, .form-group select{width:100%; padding:9px; border:1px solid var(--line); border-radius:7px; font-size:12px; font-family:'Almarai';}
+  
+  .save-btn{width:100%; background:var(--sage); color:#fff; border:none; padding:12px; border-radius:8px; font-family:'Tajawal'; font-weight:800; cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">س</div>
+    <a href="index.html" class="side-link"><span class="icon">🛒</span></a>
+    <a href="products.html" class="side-link"><span class="icon">📦</span></a>
+    <a href="statement.html" class="side-link"><span class="icon">👥</span></a>
+    <a href="purchases.html" class="side-link"><span class="icon">🧾</span></a>
+    <a href="transfer.html" class="side-link"><span class="icon">🏬</span></a>
+    <a href="cashbox.html" class="side-link"><span class="icon">💰</span></a>
+    <a href="reports.html" class="side-link"><span class="icon">📊</span></a>
+    <a href="settings.html" class="side-link active"><span class="icon">⚙️</span></a>
+  </aside>
+
+  <main class="main-content">
+    <h2>الإعدادات والضبط</h2>
+
+    <div class="card">
+      <h3>بيانات المتجر والفرع</h3>
+      <div class="form-group"><label>اسم السوبر ماركت</label><input type="text" id="store_name"></div>
+      <div class="form-group"><label>اسم الفرع</label><input type="text" id="branch_name"></div>
+      <div class="form-group"><label>العنوان</label><input type="text" id="store_address"></div>
+      <div class="form-group"><label>رقم الهاتف</label><input type="text" id="store_phone"></div>
+    </div>
+
+    <div class="card">
+      <h3>إعدادات الطباعة (الفاتورة)</h3>
+      <div class="form-group"><label>ملاحظة الترويسة (Header Note)</label><input type="text" id="header_note"></div>
+      <div class="form-group"><label>ملاحظة التذييل (Footer Note)</label><input type="text" id="footer_note"></div>
+    </div>
+
+    <div class="card">
+      <h3>إعدادات النظام</h3>
+      <div class="form-group">
+        <label>وضع البيع الافتراضي</label>
+        <select id="default_price_mode">
+          <option value="retail">سعر المفرق</option>
+          <option value="wholesale">سعر الجملة</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="save-btn" id="saveBtn" onclick="saveSettings()">حفظ الإعدادات</button>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function loadSettings(){
+  const { data } = await db.from('settings').select('*');
+  if(data){
+    data.forEach(item => {
+      const el = document.getElementById(item.key);
+      if(el) el.value = item.value;
+    });
+  }
+}
+
+async function saveSettings(){
+  const btn = document.getElementById('saveBtn');
+  btn.innerText = 'جاري الحفظ...';
+  
+  const fields = ['store_name', 'branch_name', 'store_address', 'store_phone', 'header_note', 'footer_note', 'default_price_mode'];
+  
+  for(let field of fields){
+    await db.from('settings').upsert({ key: field, value: document.getElementById(field).value });
+  }
+  
+  btn.innerText = 'تم الحفظ بنجاح!';
+  setTimeout(() => btn.innerText = 'حفظ الإعدادات', 2000);
+}
+
+window.onload = loadSettings;
+</script>
+
+</body>
+</html>
