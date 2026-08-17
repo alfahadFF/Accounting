@@ -271,6 +271,32 @@
     border-radius:7px;font-family:'Tajawal';font-weight:800;font-size:12.5px;cursor:pointer;
   }
 
+  /* تنسيقات نافذة الكاميرا وقارئ الباركود */
+  #scannerModal .modal-card {
+    width: 90%;
+    max-width: 360px;
+    min-height: 320px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  #reader {
+    width: 100% !important;
+    min-height: 250px !important;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  #reader video {
+    object-fit: cover !important;
+    border-radius: 8px;
+  }
+
   /* إيصال الطباعة الحرارية */
   #printableReceipt{display:none;}
   @media print{
@@ -405,9 +431,10 @@
 
 <!-- نافذة الكاميرا -->
 <div class="modal-overlay" id="scannerModal">
-  <div class="modal-card" style="padding:8px;">
+  <div class="modal-card">
     <button class="modal-close" onclick="stopCameraScanner()">✕</button>
-    <div id="reader" style="width:100%;"></div>
+    <h4 style="margin:0 0 6px; font-family:'Tajawal'; font-size:14px;">مسح باركود المنتج بالكاميرا</h4>
+    <div id="reader"></div>
   </div>
 </div>
 
@@ -691,11 +718,16 @@ async function handlePhoneLookup(val){
 }
 
 /* ========================================================
-   5. الكاميرا وقراءة الباركود
+   5. الكاميرا وقراءة الباركود (مضبوطة الأبعاد والتوافق)
    ======================================================== */
 function startCameraScanner(){
-  document.getElementById('scannerModal').classList.add('show');
-  html5QrCode = new Html5Qrcode("reader");
+  const modal = document.getElementById('scannerModal');
+  modal.classList.add('show');
+
+  if(!html5QrCode){
+    html5QrCode = new Html5Qrcode("reader");
+  }
+
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: { width: 230, height: 150 } },
@@ -711,7 +743,7 @@ function startCameraScanner(){
 }
 
 function stopCameraScanner(){
-  if(html5QrCode){
+  if(html5QrCode && html5QrCode.isScanning){
     html5QrCode.stop().then(() => {
       html5QrCode.clear();
       document.getElementById('scannerModal').classList.remove('show');
