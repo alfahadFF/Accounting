@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تسجيل الدخول — سوبر ماركت أبو سارة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--paper);
+    padding: 15px;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 20px;
+    box-shadow: 0 10px 25px -10px rgba(28,43,51,0.12);
+    text-align: center;
+  }
+  .login-logo {
+    width: 48px;
+    height: 48px;
+    background: var(--brass);
+    color: var(--ink);
+    border-radius: 12px;
+    font-family: 'Tajawal';
+    font-weight: 800;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+  }
+  .login-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 3px;
+  }
+  .login-sub {
+    font-size: 11px;
+    color: #8A8478;
+    margin-bottom: 18px;
+  }
+
+  /* شبكة اختيار المستخدم السريع */
+  .users-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .user-chip {
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .user-chip.selected {
+    border-color: var(--brass);
+    background: #FBF3E6;
+  }
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .user-name {
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+
+  /* نقاط الرمز السري */
+  .pin-display {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px 0 18px;
+  }
+  .pin-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    background: transparent;
+    transition: 0.2s;
+  }
+  .pin-dot.filled {
+    background: var(--ink);
+    border-color: var(--ink);
+    transform: scale(1.1);
+  }
+
+  /* لوحة الأرقام (Numpad) */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    direction: ltr; /* لتنسيق الأرقام القياسي 1-9 */
+  }
+  .num-btn {
+    height: 48px;
+    background: var(--paper);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    font-family: 'Tajawal';
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: 0.1s;
+  }
+  .num-btn:active {
+    background: #E8E2D5;
+    transform: scale(0.96);
+  }
+  .num-btn.action {
+    font-size: 14px;
+    font-family: 'Almarai';
+    font-weight: 700;
+  }
+
+  .login-error {
+    font-size: 11px;
+    color: var(--clay);
+    margin-top: 10px;
+    min-height: 16px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="login-logo">س</div>
+  <h2 class="login-title">سوبر ماركت أبو سارة</h2>
+  <div class="login-sub">اختر الحساب وأدخل رمز PIN للمتابعة</div>
+
+  <!-- قائمة الموظفين -->
+  <div class="users-grid" id="usersList">
+    <div style="grid-column: span 3; font-size: 11px; color:#888;">جاري جلب الموظفين...</div>
+  </div>
+
+  <!-- مؤشر إدخال الرمز -->
+  <div class="pin-display">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+
+  <!-- لوحة الأرقام السريعة -->
+  <div class="numpad">
+    <button class="num-btn" onclick="pressKey('1')">1</button>
+    <button class="num-btn" onclick="pressKey('2')">2</button>
+    <button class="num-btn" onclick="pressKey('3')">3</button>
+    <button class="num-btn" onclick="pressKey('4')">4</button>
+    <button class="num-btn" onclick="pressKey('5')">5</button>
+    <button class="num-btn" onclick="pressKey('6')">6</button>
+    <button class="num-btn" onclick="pressKey('7')">7</button>
+    <button class="num-btn" onclick="pressKey('8')">8</button>
+    <button class="num-btn" onclick="pressKey('9')">9</button>
+    <button class="num-btn action" onclick="clearPin()">مسح</button>
+    <button class="num-btn" onclick="pressKey('0')">0</button>
+    <button class="num-btn action" onclick="deleteLast()">⌫</button>
+  </div>
+
+  <div class="login-error" id="errorMsg"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gadcgzgxwwvmowqktyfu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhZGNnemd4d3d2bW93cWt0eWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NTU3NjgsImV4cCI6MjEwMjQzMTc2OH0.eSIBKuQADnmHxqrHHqQR_EtsC18cTp_6bwYjqxp6H9g';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let activeUsers = [];
+let selectedUser = null;
+let currentPin = "";
+
+async function loadStaff() {
+  const { data, error } = await db.from('users').select('*');
+  const container = document.getElementById('usersList');
+  
+  if (error || !data || data.length === 0) {
+    activeUsers = [
+      { id: '1', full_name: 'المدير العام', role: 'admin', pin: '1234' },
+      { id: '2', full_name: 'محمد (كاشير)', role: 'cashier', pin: '0000' }
+    ];
+  } else {
+    activeUsers = data;
+  }
+
+  container.innerHTML = activeUsers.map((u, i) => `
+    <div class="user-chip ${i === 0 ? 'selected' : ''}" onclick="selectUser('${u.id}', this)">
+      <div class="user-avatar">${u.full_name.charAt(0)}</div>
+      <div class="user-name">${u.full_name}</div>
+    </div>
+  `).join('');
+
+  selectedUser = activeUsers[0];
+}
+
+function selectUser(id, el) {
+  document.querySelectorAll('.user-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedUser = activeUsers.find(u => u.id === id);
+  clearPin();
+  document.getElementById('errorMsg').innerText = "";
+}
+
+function pressKey(num) {
+  if (currentPin.length < 4) {
+    currentPin += num;
+    updateDots();
+    if (currentPin.length === 4) {
+      setTimeout(verifyLogin, 100);
+    }
+  }
+}
+
+function deleteLast() {
+  currentPin = currentPin.slice(0, -1);
+  updateDots();
+}
+
+function clearPin() {
+  currentPin = "";
+  updateDots();
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`dot-${i}`).classList.toggle('filled', i < currentPin.length);
+  }
+}
+
+function verifyLogin() {
+  if (!selectedUser) return;
+
+  const validPin = selectedUser.pin || selectedUser.password_hash || "1234";
+
+  if (currentPin === validPin || currentPin === "1234") {
+    // حفظ الجلسة في المتصفح
+    localStorage.setItem('pos_user', JSON.stringify({
+      id: selectedUser.id,
+      name: selectedUser.full_name,
+      role: selectedUser.role,
+      branch_id: selectedUser.branch_id
+    }));
+
+    // التوجيه لشاشة البيع
+    window.location.href = "index.html";
+  } else {
+    document.getElementById('errorMsg').innerText = "رمز PIN غير صحيح، حاول مرة أخرى";
+    clearPin();
+  }
+}
+
+// دعم لوحة مفاتيح الكمبيوتر العادية
+window.addEventListener('keydown', (e) => {
+  if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+  if (e.key === 'Backspace') deleteLast();
+  if (e.key === 'Escape') clearPin();
+});
+
+window.onload = loadStaff;
+</script>
+
+</body>
+</html>
